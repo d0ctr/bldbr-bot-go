@@ -53,7 +53,7 @@ func (logger *Logger) setPrefix(level LOGLEVEL) *standartLogger.Logger {
 }
 
 func (logger *Logger) LogF(level LOGLEVEL, line string, args ...any) {
-	if level > logger.options.level {
+	if level < logger.options.level {
 		return
 	}
 	logger.setPrefix(level).Printf(line, args...)
@@ -64,7 +64,7 @@ func (logger *Logger) LogFatalF(line string, args ...any) {
 }
 
 func (logger *Logger) Log(level LOGLEVEL, args ...any) {
-	if level > logger.options.level {
+	if level < logger.options.level {
 		return
 	}
 	logger.setPrefix(level).Print(args...)

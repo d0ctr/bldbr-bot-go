@@ -1,6 +1,6 @@
 module github.com/d0ctr/bldbr-bot-go
 
-go 1.21.0
+go 1.21
 
 require (
 	github.com/dotenv-org/godotenvvault v0.6.0
