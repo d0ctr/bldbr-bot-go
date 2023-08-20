@@ -1,8 +1,10 @@
-package common
+package logger
 
 import (
 	"fmt"
 	standartLogger "log"
+	"os"
+	"strconv"
 )
 
 type LOGLEVEL byte
@@ -37,13 +39,13 @@ func getLevelS(level LOGLEVEL) string {
 
 const prefixLine string = "%s %s: "
 
-type loggerOptions struct {
-	level  LOGLEVEL
-	module string
+type LoggerOptions struct {
+	Level  LOGLEVEL // max loglevel for the logger
+	Module string   // max printable loglevel, may also be aquired from env var
 }
 
 type Logger struct {
-	options loggerOptions
+	options *LoggerOptions
 	logger  *standartLogger.Logger
 }
 
@@ -53,7 +55,7 @@ func (logger *Logger) setPrefix(level LOGLEVEL) *standartLogger.Logger {
 }
 
 func (logger *Logger) LogF(level LOGLEVEL, line string, args ...any) {
-	if level < logger.options.level {
+	if level < logger.options.Level {
 		return
 	}
 	logger.setPrefix(level).Printf(line, args...)
@@ -64,7 +66,7 @@ func (logger *Logger) LogFatalF(line string, args ...any) {
 }
 
 func (logger *Logger) Log(level LOGLEVEL, args ...any) {
-	if level < logger.options.level {
+	if level < logger.options.Level {
 		return
 	}
 	logger.setPrefix(level).Print(args...)
@@ -74,21 +76,29 @@ func (logger *Logger) LogFatal(args ...any) {
 	logger.setPrefix(LEVELFATAL).Fatal(args...)
 }
 
-func CreateLogger(module string, level LOGLEVEL) *Logger {
+func CreateLogger(loggerOptions *LoggerOptions) *Logger {
+	env_level := os.Getenv("LOGLEVEL")
+	if loggerOptions.Level == 0 && len(env_level) != 0 {
+		val, err := strconv.ParseInt(env_level, 10, 0)
+		if err != nil {
+			// doing nothing
+		}
+		loggerOptions.Level = LOGLEVEL(val)
+	}
 	logger := Logger{
 		logger: standartLogger.New(
 			standartLogger.Writer(),
 			"",
 			standartLogger.Ldate|standartLogger.Ltime|standartLogger.Lmsgprefix,
 		),
-		options: loggerOptions{module: module, level: level},
+		options: loggerOptions,
 	}
 
 	return &logger
 }
 
-func (log *Logger) Child(module string, level LOGLEVEL) *Logger {
-	module = log.options.module + "@" + module
-	childLogger := CreateLogger(module, level)
+func (Logger *Logger) Child(loggerOptions *LoggerOptions) *Logger {
+	loggerOptions.Module = Logger.options.Module + "@" + loggerOptions.Module
+	childLogger := CreateLogger(loggerOptions)
 	return childLogger
 }

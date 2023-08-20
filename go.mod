@@ -2,9 +2,7 @@ module github.com/d0ctr/bldbr-bot-go
 
 go 1.21
 
-require (
-	github.com/dotenv-org/godotenvvault v0.6.0
-)
+require github.com/dotenv-org/godotenvvault v0.6.0
 
 require (
 	github.com/joho/godotenv v1.5.1 // indirect
@@ -17,4 +15,5 @@ require (
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
+	gopkg.in/telebot.v3 v3.1.3 // indirect
 )
