@@ -1,0 +1,6 @@
+# env files
+**/.env*
+!.env.vault
+.env*
+.flaskenv*
+!.env.project
