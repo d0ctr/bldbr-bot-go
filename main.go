@@ -1,19 +1,25 @@
 package main
 
 import (
-	"os"
+	"github.com/d0ctr/bldbr-bot-go/common"
 
 	"github.com/dotenv-org/godotenvvault"
 )
 
+var logger *common.Logger = common.CreateLogger("main", common.LEVELNOISE)
+
 func main() {
-	log("Starting...\n")
+
+	logger.Log(common.LEVELINFO, "Starting...\n")
 	err := godotenvvault.Load()
 	if err != nil {
-		logFatal("error loading dotenv", err)
+		logger.LogFatal("error loading dotenv", err)
 	}
 
-	logger := Logger(loggerArgs{prefix: "main"})
-	logger.log("Hello World!\n")
-	logger.f.log("We are in %s, token is %s", os.Getenv("ENV"), os.Getenv("TELEGRAM_TOKEN"))
+	logger.Log(common.LEVELNOISE, "test")
+	logger.Log(common.LEVELDEBUG, "test")
+	logger.Log(common.LEVELINFO, "test")
+	logger.Log(common.LEVELWARN, "test")
+	logger.Log(common.LEVELERROR, "test")
+	logger.Log(common.LEVELFATAL, "test")
 }

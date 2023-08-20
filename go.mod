@@ -1,9 +1,12 @@
-module bldbr-bot-go
+module github.com/d0ctr/bldbr-bot-go
 
 go 1.21.0
 
 require (
-	github.com/dotenv-org/godotenvvault v0.6.0 // indirect
+	github.com/dotenv-org/godotenvvault v0.6.0
+)
+
+require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
