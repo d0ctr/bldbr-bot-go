@@ -99,7 +99,7 @@ func (bot *MyBot) AddHandler(what any, c interface{}, m ...tele.MiddlewareFunc) 
 	return nil
 }
 
-func (bot *MyBot) setMyCommands(lang locale.Language) error {
+func (bot *MyBot) setMyCommandsForLang(lang locale.Language) error {
 	var commandsArr []tele.Command
 	for _, c := range bot.enabledCommands {
 		telecommand := tele.Command{
@@ -121,7 +121,7 @@ func (bot *MyBot) SetMyCommands() {
 		if lang == "default" {
 			lang = ""
 		}
-		err := bot.setMyCommands(lang)
+		err := bot.setMyCommandsForLang(lang)
 		if err != nil {
 			l().F.WARN("error while setting commands [%d] for locale [%s]", len(bot.enabledCommands), lang)
 		}
