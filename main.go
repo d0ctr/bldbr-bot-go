@@ -1,14 +1,13 @@
 package main
 
 import (
-	"os"
 	"log/slog"
-	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/dotenv-org/godotenvvault"
-	"github.com/PaulSonOfLars/gotgbot/v2"
-	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 )
 
 const (
@@ -16,74 +15,41 @@ const (
 	ENV = "ENV"
 )
 
-func createLogger() *slog.Logger {
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if (a.Key == slog.TimeKey) {
-				return slog.Time(a.Key, a.Value.Time().UTC())
-			}
-
-			return a
-		},
-	};
-	handler := slog.NewJSONHandler(os.Stdout, opts);
-	logger := slog.New(handler);
-	slog.SetDefault(logger);
-	return logger;
-}
-
-func createTgBot() (*gotgbot.Bot, *ext.Dispatcher, *ext.Updater, error) {
-	tgToken := os.Getenv(TELEGRAM_TOKEN)
-	// env := os.Getenv(ENV)
-
-	opts := &gotgbot.BotOpts{
-		BotClient: &gotgbot.BaseBotClient{
-			Client: http.Client{},
-			UseTestEnvironment: false, // env == "local" || env == "dev",
-		},
-	}
-
-	bot, err := gotgbot.NewBot(tgToken, opts)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	dispatcher := ext.NewDispatcher(&ext.DispatcherOpts{
-		Logger: slog.Default(),
-	})
-
-	updater := ext.NewUpdater(dispatcher, &ext.UpdaterOpts{
-		Logger: slog.Default(),
-	})
-
-	return bot, dispatcher, updater, nil
-}
 
 func main() {
-	logger := createLogger()
+	logger := NewLogger()
+	slog.SetDefault(logger)
 	if err := godotenvvault.Load(); err != nil {
-		logger.Error("failed to acquire env variables", slog.Any("error", err));
+		logger.Error("failed to acquire env variables", err);
 	}
 
-	bot, dispatcher, updater, err := createTgBot()
+	tgClient, err := NewTgClient(os.Getenv(TELEGRAM_TOKEN))
 	if err != nil {
-		logger.Error("failed to start tg bot", slog.Any("error", err))
+		logger.Error("failed to start tg bot", err)
 	}
 
-	dispatcher.AddHandler(handlers.NewCommand(
-		"ping",
-		func(bot *gotgbot.Bot, ctx *ext.Context) error {
-			ctx.EffectiveMessage.Reply(bot, "<code>pong</code>", &gotgbot.SendMessageOpts{
-				ParseMode: "HTML",
-			})
-			return nil
-		},
-	))
 
-	updater.StartPolling(bot, nil)
+	var wg sync.WaitGroup
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	updater.Idle()
+	tgClient.Start(&wg)
 	
-	logger.Info("bot has finished")
+	go func() {
+		signal := <-stop
+		logger.Info("received signal: {}, stopping", signal)
+
+		err := tgClient.Stop()
+		if err != nil {
+			logger.Error("telegram bot has failed to stop", err)
+		}
+
+		if err != nil {
+			os.Exit(1)
+		}
+	}()
+
+	wg.Wait()
+
+	logger.Info("application has finished")
 }

@@ -1,0 +1,23 @@
+{
+    "AHEGAO_API": "https://ahegao.netlify.app/api",
+    "API_HOMEPAGE": "https://github.com/d0ctr/bilderberg-butler",
+    "DEEP_AI_API": "https://api.deepai.org/api/text2img",
+    "URBAN_API": "https://api.urbandictionary.com/v0",
+    "COINMARKETCAP_API": "https://pro-api.coinmarketcap.com",
+    "WIKIPEDIA_SEARCH_URL": {
+        "EN": "https://en.wikipedia.org/w/api.php",
+        "RU": "https://ru.wikipedia.org/w/api.php"
+    },
+    "WIKIPEDIA_SUMMARY_URL": {
+        "EN": "https://en.wikipedia.org/api/rest_v1/page/summary",
+        "RU": "https://ru.wikipedia.org/api/rest_v1/page/summary"
+    },
+    "DEFAULT_THUMBNAIL_URL": "https://github.com/d0ctr/bilderberg-butler/raw/main/docs/bilderberg-butler.jpg",
+    "RAWG_API_BASE": "https://api.rawg.io/api",
+    "RAWG_BASE": "https://rawg.io",
+    "YA300_API_BASE": "https://300.ya.ru/api/sharing-url",
+    "GENIUS_API_BASE": "https://api.genius.com",
+    "ADMIN_CHAT_ID": {
+        "TG": "-1001625731191"
+    }
+}
