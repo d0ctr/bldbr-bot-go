@@ -54,6 +54,7 @@ func NewTgClient(token string) (*TgClient, error) {
 func (tg *TgClient) Start(wg *sync.WaitGroup) {
 	tg.dispatcher.AddHandler(handlers.NewCommand("ping", commands.Ping))
 	tg.dispatcher.AddHandler(handlers.NewCommand("ahegao", commands.Ahegao))
+	tg.dispatcher.AddHandler(handlers.NewCommand("urban", commands.Urban))
 
 	tg.updater.StartPolling(tg.bot, nil)
 	tg.logger.Info("telegram bot has started")

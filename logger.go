@@ -15,12 +15,12 @@ const (
 	COMPONENT = "component"
 )
 
-type customHandler struct {
+type _CustomHandler struct {
 	inner *slog.JSONHandler
 	attrs []slog.Attr
 }
 
-func newCustomHandler() *customHandler {
+func newCustomHandler() *_CustomHandler {
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 		// for some reason time is already UTC, while slog's docs show local
@@ -32,24 +32,24 @@ func newCustomHandler() *customHandler {
 		// },
 	}
 	innerHandler := slog.NewJSONHandler(os.Stdout, opts)
-	return &customHandler{ innerHandler, make([]slog.Attr, 0) }
+	return &_CustomHandler{ innerHandler, make([]slog.Attr, 0) }
 }
 
-func (h *customHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
+func (h *_CustomHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
 	return h.inner.Enabled(ctx, lvl)
 }
 
-func (h *customHandler) WithAttrs(other []slog.Attr) slog.Handler {
+func (h *_CustomHandler) WithAttrs(other []slog.Attr) slog.Handler {
 	attrs := slices.Concat(h.attrs, other)
-	return &customHandler{ h.inner, attrs }
+	return &_CustomHandler{ h.inner, attrs }
 }
 
-func (h *customHandler) WithGroup(name string) slog.Handler {
+func (h *_CustomHandler) WithGroup(name string) slog.Handler {
 	// return &customHandler{h.inner.WithGroup(name).(*slog.JSONHandler), h.attrs}
 	return h
 }
 
-func (h *customHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *_CustomHandler) Handle(ctx context.Context, r slog.Record) error {
 	effectiveRecord := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
 
 	var components []string

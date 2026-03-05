@@ -3,26 +3,20 @@ package shared
 import (
 	"encoding/json"
 	_ "embed" 
-	"log/slog"
 )
 
 type ConfigKey = string
 const (
 	AHEGAO_API ConfigKey = "AHEGAO_API"
-	URBAN_API ConfigKey = "URBAN_API"
+	URBAN_API  ConfigKey = "URBAN_API"
 )
 
 //go:embed config.json
-var configBytes []byte
-
-var config map[string]any
+var _CONFIG_B []byte
+var _CONFIG   map[string]any = loadConfig()
 
 func GetValue[T any](key ConfigKey, def T) (T, bool) {
-	if config == nil {
-		loadConfig()
-	}
-
-	v, ok := config[key]
+	v, ok := _CONFIG[key]
 	if (v == nil || !ok) {
 		return def, false
 	}
@@ -30,10 +24,11 @@ func GetValue[T any](key ConfigKey, def T) (T, bool) {
 	return v.(T), true
 }
 
-func loadConfig() {
-	logger := slog.Default().With("component", "config")
-
-	if err := json.Unmarshal(configBytes, &config); err != nil {
-		logger.Error("failed to load config", err)
+func loadConfig() map[string]any {
+	var config map[string]any
+	if err := json.Unmarshal(_CONFIG_B, &config); err != nil {
+		panic(err)
 	}
+
+	return config
 }

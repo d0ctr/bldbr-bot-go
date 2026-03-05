@@ -16,7 +16,7 @@ func mockLogger() (*slog.Logger, *bufio.Reader) {
 		pw,
 		&slog.HandlerOptions{ Level: slog.LevelDebug },
 	)	
-	h := &customHandler{ testHandler, make([]slog.Attr, 0)}
+	h := &_CustomHandler{ testHandler, make([]slog.Attr, 0)}
 	return slog.New(h), r
 }
 
