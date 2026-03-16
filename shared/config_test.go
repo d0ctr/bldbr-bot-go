@@ -5,8 +5,8 @@ import (
 
 )
 
-func TestGetValue(t *testing.T) {
-	v, ok := GetValue(AHEGAO_API, "")
+func TestConfigKeyGet(t *testing.T) {
+	v, ok := AHEGAO_API.Get()
 
 	if !ok {
 		t.Error("expected `ok` to be true")

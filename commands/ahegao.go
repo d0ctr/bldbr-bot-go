@@ -12,12 +12,18 @@ import (
 	"github.com/d0ctr/bldbr-bot-go/shared"
 )
 
-func Ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {
+var Ahegao = CommandDefinition{
+	Name: "ahegao",
+	Description: "рандомное ахегао",
+	Handler: ahegao,
+}
+
+func ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {
 	logger := slog.Default().With("component", "ahegao")
 
-	url, ok := shared.GetValue(shared.AHEGAO_API, "")
+	url, ok := shared.AHEGAO_API.Get()
 	if !ok {
-		ctx.EffectiveMessage.Reply(bot, "Эта команда недоступна", &shared.DEFAULT_MESSAGE_OPTS)
+		ctx.Message.Reply(bot, "Эта команда недоступна", &shared.DEFAULT_MESSAGE_OPTS)
 		return fmt.Errorf("command is enabled but its constraint is not satisfied (ahegao api url is unavailable)")
 	}
 
@@ -33,12 +39,12 @@ func Ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return fmt.Errorf("failed to decode response from ahegao api: %w", err)
 	}
 
-	ahegao, ok := data["msg"]
+	ahegao_url, ok := data["msg"]
 	if !ok {
-		return Ahegao(bot, ctx)
+		return ahegao(bot, ctx)
 	}
 
-	message, err := ctx.EffectiveMessage.ReplyPhoto(bot, gotgbot.InputFileByURL(ahegao), &shared.DEFAULT_PHOTO_OPTS)
+	message, err := ctx.Message.ReplyPhoto(bot, gotgbot.InputFileByURL(ahegao_url), &shared.DEFAULT_PHOTO_OPTS)
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправлении картинки", err)
 		return fmt.Errorf("failed to send ahegao as url: %w", err)

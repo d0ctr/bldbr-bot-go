@@ -15,6 +15,11 @@ const (
 	COMPONENT = "component"
 )
 
+var _ = func () any {
+	slog.SetDefault(NewLogger())
+	return nil
+}()
+
 type _CustomHandler struct {
 	inner *slog.JSONHandler
 	attrs []slog.Attr

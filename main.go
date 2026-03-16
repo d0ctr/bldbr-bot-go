@@ -6,28 +6,14 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"github.com/dotenv-org/godotenvvault"
 )
-
-const (
-	TELEGRAM_TOKEN = "TELEGRAM_TOKEN"
-	ENV = "ENV"
-)
-
 
 func main() {
-	logger := NewLogger()
-	slog.SetDefault(logger)
-	if err := godotenvvault.Load(); err != nil {
-		logger.Error("failed to acquire env variables", err);
-	}
-
-	tgClient, err := NewTgClient(os.Getenv(TELEGRAM_TOKEN))
+	tgClient, err := NewTgClient()
 	if err != nil {
-		logger.Error("failed to start tg bot", err)
+		slog.Error("failed to start tg bot", err)
+		return
 	}
-
 
 	var wg sync.WaitGroup
 	stop := make(chan os.Signal, 1)
@@ -37,11 +23,11 @@ func main() {
 	
 	go func() {
 		signal := <-stop
-		logger.Info("received signal: {}, stopping", signal)
+		slog.Info("received signal: {}, stopping", signal)
 
 		err := tgClient.Stop()
 		if err != nil {
-			logger.Error("telegram bot has failed to stop", err)
+			slog.Error("telegram bot has failed to stop", err)
 		}
 
 		if err != nil {
@@ -51,5 +37,5 @@ func main() {
 
 	wg.Wait()
 
-	logger.Info("application has finished")
+	slog.Info("application has finished")
 }

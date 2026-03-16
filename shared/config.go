@@ -1,34 +1,74 @@
 package shared
 
 import (
+	"os"
 	"encoding/json"
 	_ "embed" 
+	"fmt"
+
+	"github.com/dotenv-org/godotenvvault"
 )
 
-type ConfigKey = string
-const (
-	AHEGAO_API ConfigKey = "AHEGAO_API"
-	URBAN_API  ConfigKey = "URBAN_API"
+var (
+	AHEGAO_API = newConfigKey("AHEGAO_API", "")
+	URBAN_API = newConfigKey("URBAN_API", "")
 )
+
+type ConfigKey[T any] struct {
+	key string
+	def T
+}
+
+func newConfigKey[T any](key string, def T) ConfigKey[T] {
+	return ConfigKey[T]{
+		key,
+		def,
+	}
+}
 
 //go:embed config.json
-var _CONFIG_B []byte
-var _CONFIG   map[string]any = loadConfig()
+var configBytes []byte
 
-func GetValue[T any](key ConfigKey, def T) (T, bool) {
-	v, ok := _CONFIG[key]
+var _CONFIG = func() map[string]any {
+	var config map[string]any
+	if err := json.Unmarshal(configBytes, &config); err != nil {
+		panic(err)
+	}
+
+	return config
+}()
+
+
+func (key ConfigKey[T]) Get() (T, bool) {
+	v, ok := _CONFIG[key.key]
 	if (v == nil || !ok) {
-		return def, false
+		return key.def, false
 	}
 
 	return v.(T), true
 }
 
-func loadConfig() map[string]any {
-	var config map[string]any
-	if err := json.Unmarshal(_CONFIG_B, &config); err != nil {
-		panic(err)
+var _ = func () any {
+	if err := godotenvvault.Load(".env.staging"); err != nil {
+		panic(fmt.Errorf("failed to acquire env variables: %w", err));
 	}
 
-	return config
+	return nil
+}()
+
+type EnvKey string
+const (
+	REDIS_URL EnvKey = "REDIS_URL"
+	TELEGRAM_TOKEN EnvKey = "TELEGRAM_TOKEN"
+	ENV EnvKey = "ENV"
+)
+
+func (key EnvKey) Get() (string, bool) {
+	v := os.Getenv(string(key))
+	if (v == "") {
+		return v, false
+	}
+
+	return v, true
 }
+

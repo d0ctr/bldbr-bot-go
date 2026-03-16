@@ -20,16 +20,21 @@ import (
 	"github.com/d0ctr/bldbr-bot-go/shared"
 )
 
-func Urban(bot *gotgbot.Bot, ctx *ext.Context) error {
+var Urban = CommandDefinition{
+	Name: "urban",
+	Description: "{запрос?} получить определение из Urban Dictionary",
+}
+
+func urban(bot *gotgbot.Bot, ctx *ext.Context) error {
 	logger := slog.Default().With("component", "urban")
 
-	url, ok := shared.GetValue(shared.URBAN_API, "")
+	url, ok := shared.URBAN_API.Get()
 	if !ok {
-		ctx.EffectiveMessage.Reply(bot, "Эта команда недоступна", &shared.DEFAULT_MESSAGE_OPTS)
+		ctx.Message.Reply(bot, "Эта команда недоступна", &shared.DEFAULT_MESSAGE_OPTS)
 		return fmt.Errorf("command is enabled but its constraint is not satisfied (urban api url is unavailable)")
 	}
 
-	q, ok := parseArgs(ctx.EffectiveMessage.GetText(), 1)[0]
+	q, ok := parseArgs(ctx.Message.GetText(), 1)[0]
 	if !ok {
 		logger.Debug("no arguments were found, falling back to random term")
 		q = ""
@@ -49,7 +54,7 @@ func Urban(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	definition := findBestDefinition(data)
 
-	message, err := ctx.EffectiveMessage.Reply(bot, definition.String(), &shared.DEFAULT_MESSAGE_OPTS)
+	message, err := ctx.Message.Reply(bot, definition.String(), &shared.DEFAULT_MESSAGE_OPTS)
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправке сообщения", err)
 		return fmt.Errorf("failed to send definition: %w", err)

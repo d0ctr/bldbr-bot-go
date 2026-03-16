@@ -10,19 +10,21 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 
+	"github.com/d0ctr/bldbr-bot-go/shared"
 	"github.com/d0ctr/bldbr-bot-go/commands"
 )
+
+var logger = slog.Default().With(slog.String("component", "tg-client"))
 
 type TgClient struct {
 	bot *gotgbot.Bot
 	dispatcher *ext.Dispatcher
 	updater *ext.Updater
-	logger *slog.Logger
 }
 
-func NewTgClient(token string) (*TgClient, error) {
-	logger := slog.Default().With(slog.String("component", "tg-client"))
-	if len(token) == 0 {
+func NewTgClient() (*TgClient, error) {
+	token, ok := shared.TELEGRAM_TOKEN.Get()
+	if !ok {
 		return nil, fmt.Errorf("token is empty")
 	}
 
@@ -46,25 +48,46 @@ func NewTgClient(token string) (*TgClient, error) {
 		Logger: logger,
 	})
 
-	tgClient := &TgClient { bot, dispatcher, updater, logger }
+	tgClient := &TgClient { bot, dispatcher, updater }
 
 	return tgClient, nil
 }
 
 func (tg *TgClient) Start(wg *sync.WaitGroup) {
-	tg.dispatcher.AddHandler(handlers.NewCommand("ping", commands.Ping))
-	tg.dispatcher.AddHandler(handlers.NewCommand("ahegao", commands.Ahegao))
-	tg.dispatcher.AddHandler(handlers.NewCommand("urban", commands.Urban))
+	for name, def := range commands.All {
+		tg.dispatcher.AddHandler(handlers.NewCommand(name, def.Handler))
+	}
 
 	tg.updater.StartPolling(tg.bot, nil)
-	tg.logger.Info("telegram bot has started")
+	logger.Info("telegram bot has started")
+
+	tg.PublishCommands()
 
 	wg.Go(func() {
 		tg.updater.Idle()
-		tg.logger.Info("telegram bot has finished")
+		logger.Info("telegram bot has finished")
 	})
 }
 
 func (tg *TgClient) Stop() error {
 	return tg.updater.Stop()
+}
+
+func (tg *TgClient) PublishCommands() {
+	var botCommands []gotgbot.BotCommand
+	for _, def := range commands.All {
+		botCommand := gotgbot.BotCommand{
+			Command: def.Name,
+			Description: def.Description,
+		}
+
+		botCommands = append(botCommands, botCommand)
+	}
+
+	if ok, err := tg.bot.SetMyCommands(botCommands, nil); !ok {
+		logger.Warn("failed to set commands", err)
+	} else {
+		logger.Debug("have set commands")
+	}
+
 }
