@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"slices"
-	"log/slog"
 	"strings"
 	"unicode"
 	"encoding/json"
