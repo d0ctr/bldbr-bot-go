@@ -21,7 +21,7 @@ type CommandDefinition struct {
 }
 
 var All = func() map[string]CommandDefinition {
-	all_a := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst}
+	all_a := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst, Voice}
 
 	all_m := make(map[string]CommandDefinition, len(all_a))
 	

@@ -23,6 +23,7 @@ import (
 var Urban = CommandDefinition{
 	Name: "urban",
 	Description: "{запрос?} получить определение из Urban Dictionary",
+	Handler: urban,
 }
 
 func urban(bot *gotgbot.Bot, ctx *ext.Context) error {
