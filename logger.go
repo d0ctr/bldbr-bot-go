@@ -26,16 +26,7 @@ type _CustomHandler struct {
 }
 
 func newCustomHandler() *_CustomHandler {
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-		// for some reason time is already UTC, while slog's docs show local
-		// ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-		// 	if (a.Key ==  slog.TimeKey) {
-		// 		return slog.Time(a.Key, a.Value.Time().UTC())
-		// 	}
-		// 	return a
-		// },
-	}
+	opts := &slog.HandlerOptions{ Level: slog.LevelDebug }
 	innerHandler := slog.NewJSONHandler(os.Stdout, opts)
 	return &_CustomHandler{ innerHandler, make([]slog.Attr, 0) }
 }

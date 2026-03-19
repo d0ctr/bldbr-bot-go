@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"fmt"
-	"time"
 	"io"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
@@ -40,16 +39,8 @@ func voice(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return fmt.Errorf("command must be sent as a reply")
 	}
 
-	
-	ticker := time.NewTicker(time.Second * 5)
-	defer ticker.Stop()
-	go func() {
-		for {
-			ctx.Message.Chat.SendAction(bot, gotgbot.ChatActionRecordVoice, nil)
-			<-ticker.C
-		}
-
-	}()
+	endAction := withAction(bot, ctx, gotgbot.ChatActionRecordVoice)
+	defer endAction()
 
 	var reader io.Reader
 	if msg.Audio != nil {

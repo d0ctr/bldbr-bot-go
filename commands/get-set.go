@@ -60,7 +60,7 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 	}
 
 	var text string
-	var media *_Media
+	var media *Media
 
 	switch keyType {
 	case "none":
@@ -81,7 +81,7 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 		}
 
 		text = data.Text
-		media = &_Media{
+		media = &Media{
 			Id: data.GetMedia(),
 			Type: data.Type,
 		}
@@ -231,7 +231,7 @@ func toKey(ctx *ext.Context, name string) string {
 }
 
 type _Data struct {
-	Type        _MediaType  `json:"type"`
+	Type        MediaType  `json:"type"`
 	Owner       any         `json:"owner"`
 
 	Text        string      `json:"text,omitempty"`

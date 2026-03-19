@@ -2,118 +2,45 @@ package commands
 
 import (
 	"fmt"
-	"net/http"
-	"slices"
-	"strings"
-	"regexp"
-
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 
 	"github.com/d0ctr/bldbr-bot-go/shared"
 )
 
-type CommandDefinition struct {
-	Name, Description string
-	Handler handlers.Response
-}
-
-var All = func() map[string]CommandDefinition {
-	all_a := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst, Voice}
-
-	all_m := make(map[string]CommandDefinition, len(all_a))
-	
-	for _, def := range all_a {
-		all_m[def.Name] = def
-	}
-
-	return all_m
-}()
-
-var _WORDS_RE = regexp.MustCompile(` ([^ ]+)`)
-
-func parseArgs(text string, limit uint) map[uint]string {
-	matches := _WORDS_RE.FindAllStringSubmatch(text, -1)
-
-	words := make(map[uint]string, len(matches))
-	for i, match := range matches {
-		words[uint(i)] = match[1]
-	}
-
-	if (limit > 0 && limit <= uint(len(words))) {
-		args := make(map[uint]string, limit)
-
-		i := uint(0);
-		for ; i < limit - 1; i++ {
-			args[i] = words[i]
-		}
-
-		lastArgSlice := make([]string, len(words) - int(limit) + 1)
-		for ; i < uint(len(words)); i++ {
-			lastArgSlice[i - limit + 1] = words[i]
-		}
-		args[limit - 1] = strings.Join(lastArgSlice, " ")
-
-		return args
-	}
-	return words
-}
-
-func sendErrorMsg(bot *gotgbot.Bot, ctx *ext.Context, msg string, errs ...error) (*gotgbot.Message, error) {
-	if len(errs) > 0 {
-		msg = fmt.Sprintf("%s : \n<code>%s</code>", msg, errs[0].Error())
-	}
-	return ctx.Message.Reply(bot, msg, &shared.DEFAULT_MESSAGE_OPTS)
-}
-
-func handleHttpResponse(bot *gotgbot.Bot, ctx *ext.Context, entity string, r *http.Response, err error, statusCodes ...int) error {
-	if len(statusCodes) == 0 {
-		statusCodes = []int{http.StatusOK}
-	}
-	if err != nil || !slices.Contains(statusCodes, r.StatusCode) {
-		if err == nil {
-			err = fmt.Errorf("request to %s has failed with status [%s]", entity, r.Status)
-		}
-		sendErrorMsg(bot, ctx, "Ошибка при запросе", err)
-		return fmt.Errorf("failed to get %s: %w", entity, err)
-	}
-
-	return nil
-}
-
-type _MediaType string;
+type MediaType string;
 
 const (
-	MEDIA_TYPE_AUDIO       _MediaType = "audio"
-	MEDIA_TYPE_ANIMATION   _MediaType = "animation"
-	MEDIA_TYPE_DOCUMENT    _MediaType = "document"
-	MEDIA_TYPE_PHOTO       _MediaType = "photo"
-	MEDIA_TYPE_STICKER     _MediaType = "sticker"
-	MEDIA_TYPE_VIDEO       _MediaType = "video"
-	MEDIA_TYPE_VIDEO_NOTE  _MediaType = "video_note"
-	MEDIA_TYPE_VOICE       _MediaType = "voice"
+	MEDIA_TYPE_AUDIO       MediaType = "audio"
+	MEDIA_TYPE_ANIMATION   MediaType = "animation"
+	MEDIA_TYPE_DOCUMENT    MediaType = "document"
+	MEDIA_TYPE_PHOTO       MediaType = "photo"
+	MEDIA_TYPE_STICKER     MediaType = "sticker"
+	MEDIA_TYPE_VIDEO       MediaType = "video"
+	MEDIA_TYPE_VIDEO_NOTE  MediaType = "video_note"
+	MEDIA_TYPE_VOICE       MediaType = "voice"
 
 	// not an actual media type but a fallback type
-	MEDIA_TYPE_TEXT        _MediaType = "text"
+	MEDIA_TYPE_TEXT        MediaType = "text"
 	
 	// these could be supported but would require a more sophisticated reference than a simple file id
-	// MEDIA_TYPE_MEDIA_GROUP _MediaType = "media_group"
-	// MEDIA_TYPE_CONTACT     _MediaType = "contact"
-	// MEDIA_TYPE_DICE        _MediaType = "dice"
-	// MEDIA_TYPE_GAME        _MediaType = "game"
-	// MEDIA_TYPE_INVOICE     _MediaType = "invoice"
-	// MEDIA_TYPE_LOCATION    _MediaType = "location"
-	// MEDIA_TYPE_POLL        _MediaType = "poll"
-	// MEDIA_TYPE_VENUE       _MediaType = "venue"
+	// MEDIA_TYPE_MEDIA_GROUP MediaType = "media_group"
+	// MEDIA_TYPE_CONTACT     MediaType = "contact"
+	// MEDIA_TYPE_DICE        MediaType = "dice"
+	// MEDIA_TYPE_GAME        MediaType = "game"
+	// MEDIA_TYPE_INVOICE     MediaType = "invoice"
+	// MEDIA_TYPE_LOCATION    MediaType = "location"
+	// MEDIA_TYPE_POLL        MediaType = "poll"
+	// MEDIA_TYPE_VENUE       MediaType = "venue"
 )
 
-type _Media struct {
+type Media struct {
 	Id string
-	Type _MediaType
+	Type MediaType
 }
-func getMedia(message *gotgbot.Message) (media _Media) {
+
+func getMedia(message *gotgbot.Message) (media Media) {
 	if message.Audio != nil {
 		media.Id   = message.Audio.FileId
 		media.Type = MEDIA_TYPE_AUDIO
@@ -143,7 +70,7 @@ func getMedia(message *gotgbot.Message) (media _Media) {
 	return media
 }
 
-func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *_Media) (*gotgbot.Message, error) {
+func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*gotgbot.Message, error) {
 	var msg *gotgbot.Message
 	var err error
 	switch media.Type {
