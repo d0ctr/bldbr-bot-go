@@ -21,19 +21,19 @@ func parseArgs(text string, limit uint) map[uint]string {
 	if !ok {
 		return args
 	}
+	words := strings.Split(text, " ")
 	var i uint = 0
-	for word := range strings.SplitSeq(text, " ") {
-		if i < limit {
-			if word == "" {
-				continue
-			}
-			args[i] = word
-			i += 1
-		} else if last, ok := args[i]; ok {
-			args[i] = strings.Join([]string{ last, word }, " ")
-		} else {
-			args[i] = word
+	var j uint = 0
+	for ; (limit == 0 || limit > (i + 1)) && j < uint(len(words)); j += 1 {
+		if words[j] == "" {
+			continue
 		}
+		args[i] = words[j]
+		i += 1
+	}
+
+	if i < uint(len(words)) {
+		args[i] = strings.Join(words[j:], " ")
 	}
 
 	return args

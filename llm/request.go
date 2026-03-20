@@ -3,7 +3,7 @@ package llm
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"slices"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
@@ -48,7 +48,6 @@ Formatted text must always be formatted using HTML-like style. It includes follo
 `
 
 func SendRequest(messages []*Message) (*Message, error) {
-	logger := slog.With("component", "answer")
 	messages = fixMessages(messages)
 
 
@@ -60,7 +59,7 @@ func SendRequest(messages []*Message) (*Message, error) {
 	body := responses.ResponseNewParams{
 		Instructions: openai.String(prompt),
 		Store: openai.Bool(false),
-		Input: responses.ResponseNewParamsInputUnion{ OfInputItemList: toInput(messages) },
+		Input: mapMessages(messages),
 		ToolChoice: responses.ResponseNewParamsToolChoiceUnion{
 			OfToolChoiceMode: openai.Opt(responses.ToolChoiceOptionsAuto),
 		},
@@ -85,10 +84,8 @@ func SendRequest(messages []*Message) (*Message, error) {
 	}
 
 	for _, item := range r.Output {
-		logger.Info(fmt.Sprintf("checking item: %v", item))
 		if item.Type == "message" && item.Status == "completed" {
 			for _, content := range item.Content {
-				logger.Info(fmt.Sprintf("checking content: %v", content))
 				if content.Type == "output_text" {
 					result := FromText("", MESSAGE_ROLE_ASSISTANT, content.Text)
 					return result, nil
@@ -100,64 +97,84 @@ func SendRequest(messages []*Message) (*Message, error) {
 	return nil, fmt.Errorf("no valid response: %v", r.Output)
 }
 
-func fixMessages(messages []*Message) []*Message {
-	// if len(messages) == 1 -> then role must always be a user role
+func containsMediaContent(contents []*MessageContent) bool {
+	return slices.ContainsFunc(contents, func(content *MessageContent) bool {
+		return content.t == _MessageContentTypeMedia
+	})
+}
 
-	if len(messages) == 1 {
+func fixMessages(messages []*Message) []*Message {
+	// if len(messages) == 1 or first message contains media
+	// -> then role must always be a user role
+
+	if len(messages) == 1 || containsMediaContent(messages[0].content)  {
 		messages[0].role = MESSAGE_ROLE_USER
 	}
 
 	return messages
 }
 
-func (r MessageRole) toOpenAiRole() string {
+func mapRole(r MessageRole) responses.EasyInputMessageRole {
 	switch r {
 	case MESSAGE_ROLE_USER:
-		return string(responses.EasyInputMessageRoleUser)
+		return responses.EasyInputMessageRoleUser
 	case MESSAGE_ROLE_ASSISTANT:
-		return string(responses.EasyInputMessageRoleAssistant)
+		return responses.EasyInputMessageRoleAssistant
 	case MESSAGE_ROLE_SYSTEM:
-		return string(responses.EasyInputMessageRoleSystem)
+		return responses.EasyInputMessageRoleSystem
 	}
 	panic("unreachable")
 }
 
-func (c MessageContent) toOpenAiContent() responses.ResponseInputContentUnionParam {
-
+func mapContentItem(c *MessageContent) responses.ResponseInputContentUnionParam{
+	var inputText *responses.ResponseInputTextParam = nil
+	var inputImage *responses.ResponseInputImageParam = nil
 	switch c.t {
 	case _MessageContentTypeMedia:
-		return responses.ResponseInputContentUnionParam{
-			OfInputImage: &responses.ResponseInputImageParam{
-				ImageURL: openai.String(fmt.Sprintf("data:%s;base64,%s",c.media.mediaType, c.media.base64)),
-			},
+		inputImage = &responses.ResponseInputImageParam{
+			ImageURL: openai.String(fmt.Sprintf("data:%s;base64,%s",c.media.mediaType, c.media.base64)),
 		}
 	case _MessageContentTypeText:
-		return responses.ResponseInputContentParamOfInputText(c.text)
-	}
-	panic("unreachable")
+		inputText = &responses.ResponseInputTextParam {
+			Text: c.text,
+		}
 
+	}
+	return responses.ResponseInputContentUnionParam{
+		OfInputText: inputText,
+		OfInputImage: inputImage,
+	}
 }
 
-func mapContent(content []*MessageContent) responses.ResponseInputMessageContentListParam {
+func mapContentList(contents []*MessageContent) responses.EasyInputMessageContentUnionParam {
+	if len(contents) == 1 && contents[0].t == _MessageContentTypeText {
+		text := contents[0].text
+		return responses.EasyInputMessageContentUnionParam{ OfString: openai.String(text) }
+	}
+
 	var list responses.ResponseInputMessageContentListParam
 
-	for _, c := range content {
-		list = append(list, c.toOpenAiContent())
+	for _, c := range contents {
+		list = append(list, mapContentItem(c))
 	}
 
-	return list
+	return responses.EasyInputMessageContentUnionParam{ OfInputItemContentList: list }
 }
 
-func toInput(messages []*Message) responses.ResponseInputParam {
-	var input responses.ResponseInputParam
+func mapMessages(messages []*Message) responses.ResponseNewParamsInputUnion {
+	var items []responses.ResponseInputItemUnionParam
 
 	for _, message := range messages {
-		role := message.role.toOpenAiRole()
-		content := mapContent(message.content)
-		item := responses.ResponseInputItemParamOfInputMessage(content, role)
+		item := responses.ResponseInputItemUnionParam{
+			OfMessage: &responses.EasyInputMessageParam{
+				Role: mapRole(message.role),
+				Content: mapContentList(message.content),
+			},
+		}
 
-		input = append(input, item)
+		items = append(items, item)
 	}
-
-	return input
+	return responses.ResponseNewParamsInputUnion{
+		OfInputItemList: items,
+	}
 }

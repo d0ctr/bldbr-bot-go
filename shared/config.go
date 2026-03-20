@@ -47,7 +47,8 @@ func (key ConfigKey[T]) Get() (T, bool) {
 
 var _ = func () any {
 	if err := godotenvvault.Load(); err != nil {
-		panic(fmt.Errorf("failed to acquire env variables: %w", err));
+		fmt.Errorf("failed to acquire env variables: %w", err)
+		// panic();
 	}
 
 	return nil
