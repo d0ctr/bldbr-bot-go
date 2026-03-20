@@ -15,9 +15,33 @@ import (
 	"github.com/d0ctr/bldbr-bot-go/shared"
 )
 
-var WORDS_RE = regexp.MustCompile(` ([^ ]+)`)
-
 func parseArgs(text string, limit uint) map[uint]string {
+	_, text, ok := strings.Cut(text, " ")
+	args := make(map[uint]string)
+	if !ok {
+		return args
+	}
+	var i uint = 0
+	for word := range strings.SplitSeq(text, " ") {
+		if i < limit {
+			if word == "" {
+				continue
+			}
+			args[i] = word
+			i += 1
+		} else if last, ok := args[i]; ok {
+			args[i] = strings.Join([]string{ last, word }, " ")
+		} else {
+			args[i] = word
+		}
+	}
+
+	return args
+}
+
+func parseArgsDep(text string, limit uint) map[uint]string {
+	var WORDS_RE = regexp.MustCompile(` ([^ ]+)`)
+
 	matches := WORDS_RE.FindAllStringSubmatch(text, -1)
 
 	words := make(map[uint]string, len(matches))

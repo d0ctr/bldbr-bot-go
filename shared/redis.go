@@ -8,15 +8,15 @@ import (
 )
 
 func Redis() (*redis.Client, context.Context) {
-	if (client == nil) {
-		client = connect()
+	if (redisClient == nil) {
+		redisClient = getRedisClient()
 	}
-	return client, context.Background()
+	return redisClient, context.Background()
 }
 
-var client *redis.Client = nil 
+var redisClient *redis.Client = nil 
 
-func connect() *redis.Client {
+func getRedisClient() *redis.Client {
 	var logger = slog.Default().With("component", "redis")
 
 	url, ok := REDIS_URL.Get()

@@ -9,7 +9,6 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/option"
 	"github.com/google/uuid"
 
 	"github.com/d0ctr/bldbr-bot-go/shared"
@@ -20,16 +19,6 @@ var Voice = CommandDefinition{
 	Description: "Генерирует голосове сообщение из текста или аудио",
 	Handler: voice,
 }
-
-var client = func() *openai.Client {
-	token, ok := shared.OPENAI_TOKEN.Get()
-	if !ok {
-		return nil
-	}
-
-	c := openai.NewClient(option.WithAPIKey(token))
-	return &c
-}()
 
 func voice(bot *gotgbot.Bot, ctx *ext.Context) error {
 	msg := ctx.Message.ReplyToMessage
@@ -51,8 +40,12 @@ func voice(bot *gotgbot.Bot, ctx *ext.Context) error {
 			reader = _reader
 		}
 	} else {
+		client := shared.OpenAi()
 		
-		if _reader, err := toSpeech(msg.Text); err != nil {
+		if client == nil {
+			sendErrorMsg(bot, ctx, "Озвучка отдыхает.")
+			return fmt.Errorf("openai is not available")
+		} else if _reader, err := toSpeech(client, msg.Text); err != nil {
 			sendErrorMsg(bot, ctx, "Не удалось сгенерировать аудио", err)
 			return fmt.Errorf("error generating audio: %w", err)
 		} else {
@@ -79,8 +72,8 @@ Tone: Excited, chaotic, and grandiose, as if reveling in the brilliance of a mad
 
 Pronunciation: Sharp and expressive, with elongated vowels, sudden inflections, and an emphasis on big words to sound more diabolical.`
 
-func toSpeech(text string) (io.Reader, error) {
-	otx := context.Background()
+func toSpeech(client *openai.Client, text string) (io.Reader, error) {
+	ctx := context.Background()
 	body := openai.AudioSpeechNewParams{
 		Model: openai.SpeechModelGPT4oMiniTTS,
 		Input: text,
@@ -90,7 +83,7 @@ func toSpeech(text string) (io.Reader, error) {
 		},
 		Instructions: openai.String(prompt),
 	}
-	r, err := client.Audio.Speech.New(otx, body)
+	r, err := client.Audio.Speech.New(ctx, body)
 	if err != nil {
 		return nil, err
 	} else if r.StatusCode != 200 {
