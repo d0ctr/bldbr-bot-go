@@ -1,4 +1,4 @@
-package main
+package tg
 
 import (
 	"fmt"
@@ -9,12 +9,14 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
+	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters"
 
 	"github.com/d0ctr/bldbr-bot-go/shared"
-	"github.com/d0ctr/bldbr-bot-go/commands"
+	"github.com/d0ctr/bldbr-bot-go/tg/commands"
+	"github.com/d0ctr/bldbr-bot-go/llm"
 )
 
-var logger = slog.Default().With(slog.String("component", "tg-client"))
+var logger = slog.Default().With("component", "tg-client")
 
 type TgClient struct {
 	bot *gotgbot.Bot
@@ -53,10 +55,20 @@ func NewTgClient() (*TgClient, error) {
 	return tgClient, nil
 }
 
+func (tg *TgClient) isReplyToBot() filters.Message {
+	return func (msg *gotgbot.Message) bool {
+		return msg.ReplyToMessage != nil &&
+		msg.ReplyToMessage.From.Id == tg.bot.Id &&
+		msg.From.Id != tg.bot.Id
+	}
+}
+
 func (tg *TgClient) Start(wg *sync.WaitGroup) {
 	for name, def := range commands.All {
 		tg.dispatcher.AddHandler(handlers.NewCommand(name, def.Handler))
 	}
+
+	tg.dispatcher.AddHandler(handlers.NewMessage(tg.isReplyToBot(), llm.HandleTgChain))
 
 	tg.updater.StartPolling(tg.bot, nil)
 	logger.Info("telegram bot has started")

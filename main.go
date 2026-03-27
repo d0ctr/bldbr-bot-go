@@ -6,10 +6,12 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/d0ctr/bldbr-bot-go/tg"
 )
 
 func main() {
-	tgClient, err := NewTgClient()
+	tgClient, err := tg.NewTgClient()
 	if err != nil {
 		slog.Error("failed to start tg bot", err)
 		return

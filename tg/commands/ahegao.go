@@ -1,15 +1,16 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"encoding/json"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"github.com/d0ctr/bldbr-bot-go/shared"
+	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 var Ahegao = CommandDefinition{
@@ -23,7 +24,7 @@ func ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	url, ok := shared.AHEGAO_API.Get()
 	if !ok {
-		ctx.Message.Reply(bot, "Эта команда недоступна", &shared.DEFAULT_MESSAGE_OPTS)
+		ctx.Message.Reply(bot, "Эта команда недоступна", utils.GetDefaultMessageOpts())
 		return fmt.Errorf("command is enabled but its constraint is not satisfied (ahegao api url is unavailable)")
 	}
 
@@ -44,7 +45,7 @@ func ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return ahegao(bot, ctx)
 	}
 
-	message, err := ctx.Message.ReplyPhoto(bot, gotgbot.InputFileByURL(ahegao_url), &shared.DEFAULT_PHOTO_OPTS)
+	message, err := ctx.Message.ReplyPhoto(bot, gotgbot.InputFileByURL(ahegao_url), utils.GetDefaultPhotoOpts())
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправлении картинки", err)
 		return fmt.Errorf("failed to send ahegao as url: %w", err)

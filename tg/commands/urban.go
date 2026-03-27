@@ -3,12 +3,12 @@ package commands
 import (
 	"bufio"
 	"cmp"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	net_url "net/url" 
-	"encoding/json"
+	net_url "net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -18,6 +18,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"github.com/d0ctr/bldbr-bot-go/shared"
+	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 var Urban = CommandDefinition{
@@ -31,7 +32,7 @@ func urban(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	url, ok := shared.URBAN_API.Get()
 	if !ok {
-		ctx.Message.Reply(bot, "Эта команда недоступна", &shared.DEFAULT_MESSAGE_OPTS)
+		ctx.Message.Reply(bot, "Эта команда недоступна", utils.GetDefaultMessageOpts())
 		return fmt.Errorf("command is enabled but its constraint is not satisfied (urban api url is unavailable)")
 	}
 
@@ -55,7 +56,7 @@ func urban(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	definition := findBestDefinition(data)
 
-	message, err := ctx.Message.Reply(bot, definition.String(), &shared.DEFAULT_MESSAGE_OPTS)
+	message, err := ctx.Message.Reply(bot, definition.String(), utils.GetDefaultMessageOpts())
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправке сообщения", err)
 		return fmt.Errorf("failed to send definition: %w", err)

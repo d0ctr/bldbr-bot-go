@@ -2,29 +2,35 @@ package llm
 
 import (
 	base64Enc "encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
-	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
+	"github.com/PaulSonOfLars/gotgbot/v2/ext"
+
+	tg "github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
-func GetAuthorAndRole(bot *gotgbot.Bot, source *gotgbot.Message) (string, MessageRole) {
-	var role MessageRole
+func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, author string, role MessageRole) {
+	id = strconv.FormatInt(source.MessageId, 10)
+
 	if source.From.Id == bot.Id {
 		role = MESSAGE_ROLE_ASSISTANT
 	} else {
 		role = MESSAGE_ROLE_USER
 	}
 
-	author := fmt.Sprintf(`%s "%s" %s`, source.From.FirstName, source.From.Username, source.From.LastName)
+	author = fmt.Sprintf(`%s "%s" %s`, source.From.FirstName, source.From.Username, source.From.LastName)
 
-	return author, role
+	return id, author, role
 }
 
 func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) *Message {
-	author, role := GetAuthorAndRole(bot, source)
+	id, author, role := GetMessageParams(bot, source)
 
 	var content []*MessageContent
 
@@ -48,7 +54,7 @@ func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) *Message {
 		} else {
 			base64 := base64Enc.StdEncoding.EncodeToString(bytes)
 			mediaType := r.Header.Get("Content-Type")
-			if mediaType == "" {
+			if mediaType == "" || !strings.Contains(mediaType, "image"){
 				mediaType = "image/jpeg"
 			}
 
@@ -59,5 +65,117 @@ func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) *Message {
 
 	}
 
-	return NewMessage(author, role, content)
+	return &Message{ id, author, role, content }
+}
+
+func (*_Heap) GetTgTree(chatId int64) *Tree {
+	treeId := strconv.FormatInt(chatId, 10)
+
+	if tree, ok := Heap.tg[treeId]; ok {
+		return tree
+	} else {
+		return nil
+	}
+}
+
+func (*_Heap) AddTgTree(chatId int64, tree *Tree) {
+	treeId := strconv.FormatInt(chatId, 10)
+	Heap.tg[treeId] = tree
+}
+
+func (t *Tree) GetTgNode(messageId int64) *TreeNode {
+	nodeId := strconv.FormatInt(messageId, 10)
+
+	if node, ok := t.nodes[nodeId]; ok {
+		return node
+	} else {
+		return nil
+	}
+}
+
+func (*_Heap) GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
+	chatId := source.Chat.Id
+	tree := Heap.GetTgTree(chatId)
+	var node *TreeNode
+
+	if tree == nil {
+		message := FromTgMessage(bot, source)
+		node = NewTreeNode(message)
+		tree = NewTree(node)
+		
+		Heap.AddTgTree(chatId, tree)
+	} else {
+		node = tree.GetTgNode(source.MessageId)
+	}
+
+	if node == nil {
+		message := FromTgMessage(bot, source)
+		node = NewTreeNode(message)
+		tree.AddNode(node)
+	}
+
+	return tree, node
+}
+
+func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
+	chatId := ctx.Message.Chat.Id
+	var tree *Tree
+	var node *TreeNode
+
+	if ctx.Message.ReplyToMessage != nil {
+		tree, node = Heap.GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
+	}
+
+	if tree == nil {
+		tree = Heap.GetTgTree(chatId)
+	}
+
+	{
+		prev := node
+		message := FromTgMessage(bot, ctx.Message)
+		node = NewTreeNode(message)
+
+		if tree == nil {
+			tree = NewTree(node)
+
+			Heap.AddTgTree(ctx.Message.Chat.Id, tree)
+		} else if prev == nil {
+			tree.AddNode(node)
+		} else {
+			tree.AppendNode(prev, node)
+		}
+	}
+
+	if node == nil {
+		panic("this is a reply message it at least must have a new node created from the replyed message")
+	}
+
+	messages := tree.CollectMessages(node)
+
+	endAction := tg.WithAction(bot, ctx, gotgbot.ChatActionTyping)
+	defer endAction()
+
+	r, err := SendRequest(messages)
+	if err != nil {
+		tg.SendErrorMsg(bot, ctx, "Ошибка при получении ответа", err)
+		return fmt.Errorf("request resulted in an error: %w", err)
+	}
+
+	text, ok := r.GetText()
+	if !ok {
+		tg.SendErrorMsg(bot, ctx, "В ответе не было текста...")
+		return fmt.Errorf("no text in the response: %v", r)
+	}
+
+	tgMessage, err := ctx.Message.ReplyMessage(bot, text, tg.GetDefaultMessageOpts())
+	if err != nil {
+		tg.SendErrorMsg(bot, ctx, "ошибка при отправке ответа", err)
+	}
+
+	prev := node
+	message := FromTgMessage(bot, tgMessage)
+	node = NewTreeNode(message)
+	tree.AppendNode(prev, node)
+
+	return nil
 }

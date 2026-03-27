@@ -2,6 +2,7 @@ package llm
 
 import (
 	"log/slog"
+	"strconv"
 )
 
 var logger = slog.With("component", "llm")
@@ -15,19 +16,22 @@ const (
 )
 
 type Message struct {
+	id string
 	author string
 	role MessageRole
 	content []*MessageContent
 }
 
-func NewMessage(author string, role MessageRole, content []*MessageContent) *Message {
-	return &Message{ author, role, content }
-}
+func FromText[T ~int | ~int64 | string](id T, author string, role MessageRole, text string) *Message {
+	var idStr string
+	switch any(id).(type) {
+	case string: idStr = any(id).(string)
+	default: idStr = strconv.FormatInt(any(id).(int64), 10)
+	}
 
-func FromText(author string, role MessageRole, text string) *Message {
 	content := []*MessageContent{ NewMessageContentText(text) }
 
-	return NewMessage(author, role, content)
+	return &Message{idStr, author, role, content}
 }
 
 func (m Message) GetText() (string, bool) {

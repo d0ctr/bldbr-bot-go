@@ -1,16 +1,17 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 	"unicode"
-	"encoding/json"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"github.com/d0ctr/bldbr-bot-go/shared"
+	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 var Get = CommandDefinition{
@@ -96,7 +97,7 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 	if media != nil {
 		_, err = sendMedia(bot, ctx, text, media)
 	} else {
-		_, err = ctx.Message.Reply(bot, text, &shared.DEFAULT_MESSAGE_OPTS)
+		_, err = ctx.Message.Reply(bot, text, utils.GetDefaultMessageOpts())
 	}
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправке.", err)
@@ -132,7 +133,7 @@ func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
 	}
 
 	text :=  fmt.Sprintf("Записи доступные в этом чате:\n%s", strings.Join(keys, "\n"))
-	_, err = ctx.Message.Reply(bot, text, &shared.DEFAULT_MESSAGE_OPTS)
+	_, err = ctx.Message.Reply(bot, text, utils.GetDefaultMessageOpts())
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправке.", err)
 		return fmt.Errorf("error sending the message: %w", err)
@@ -200,7 +201,7 @@ func set(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return err
 	}
 
-	if _, err := ctx.Message.Reply(bot, fmt.Sprintf("Запись была сохранена под названием <code>%s</code>", name), &shared.DEFAULT_MESSAGE_OPTS); err != nil {
+	if _, err := ctx.Message.Reply(bot, fmt.Sprintf("Запись была сохранена под названием <code>%s</code>", name), utils.GetDefaultMessageOpts()); err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправке сообщения", err)
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 type MediaType string;
@@ -73,11 +73,12 @@ func getMedia(message *gotgbot.Message) (media Media) {
 func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*gotgbot.Message, error) {
 	var msg *gotgbot.Message
 	var err error
+	replyParameters := utils.GetDefaultReplyParameters()
 	switch media.Type {
 	case MEDIA_TYPE_ANIMATION: 
 		opts := gotgbot.SendAnimationOpts{
 			Caption: text,
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 			ParseMode: gotgbot.ParseModeHTML,
 		}
 
@@ -87,7 +88,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 	case MEDIA_TYPE_AUDIO:
 		opts := gotgbot.SendAudioOpts{
 			Caption: text,
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 			ParseMode: gotgbot.ParseModeHTML,
 		}
 
@@ -97,7 +98,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 	case MEDIA_TYPE_DOCUMENT:
 		opts := gotgbot.SendDocumentOpts{
 			Caption: text,
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 			ParseMode: gotgbot.ParseModeHTML,
 		}
 
@@ -107,7 +108,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 	case MEDIA_TYPE_PHOTO:
 		opts := gotgbot.SendPhotoOpts{
 			Caption: text,
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 			ParseMode: gotgbot.ParseModeHTML,
 		}
 
@@ -116,7 +117,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 		msg, err = ctx.Message.ReplyPhoto(bot, input, &opts)
 	case MEDIA_TYPE_STICKER:
 		opts := gotgbot.SendStickerOpts{
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 		}
 
 		input := gotgbot.InputFileByID(media.Id)
@@ -125,7 +126,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 	case MEDIA_TYPE_VIDEO:
 		opts := gotgbot.SendVideoOpts{
 			Caption: text,
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 			ParseMode: gotgbot.ParseModeHTML,
 		}
 
@@ -134,7 +135,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 		msg, err = ctx.Message.ReplyVideo(bot, input, &opts)
 	case MEDIA_TYPE_VIDEO_NOTE:
 		opts := gotgbot.SendVideoNoteOpts{
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 		}
 
 		input := gotgbot.InputFileByID(media.Id)
@@ -143,7 +144,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 	case MEDIA_TYPE_VOICE:
 		opts := gotgbot.SendVoiceOpts{
 			Caption: text,
-			ReplyParameters: &shared.DEFAULT_REPLY_PARAMETERS,
+			ReplyParameters: replyParameters,
 			ParseMode: gotgbot.ParseModeHTML,
 		}
 
@@ -152,7 +153,7 @@ func sendMedia(bot *gotgbot.Bot, ctx *ext.Context, text string, media *Media) (*
 		msg, err = ctx.Message.ReplyVoice(bot, input, &opts)
 	default:
 		if text != "" {
-			msg, err = ctx.Message.Reply(bot, text, &shared.DEFAULT_MESSAGE_OPTS)
+			msg, err = ctx.Message.Reply(bot, text, utils.GetDefaultMessageOpts())
 		}
 
 	}

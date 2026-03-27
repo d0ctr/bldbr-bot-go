@@ -4,7 +4,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 var Ping = CommandDefinition{
@@ -14,7 +14,7 @@ var Ping = CommandDefinition{
 }
 
 func ping(bot *gotgbot.Bot, ctx *ext.Context) error {
-	_, err := ctx.Message.Reply(bot, "<code>pong</code>", &shared.DEFAULT_MESSAGE_OPTS)
+	_, err := ctx.Message.Reply(bot, "<code>pong</code>", utils.GetDefaultMessageOpts())
 	return err
 }
 
