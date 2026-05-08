@@ -87,7 +87,7 @@ func toSpeech(client *openai.Client, text string) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	} else if r.StatusCode != 200 {
-		return nil, fmt.Errorf("non-200 response from tts api [%s]: %v", r.StatusCode, r.Body)
+		return nil, fmt.Errorf("non-200 response from tts api [%v]: %v", r.StatusCode, r.Body)
 	}
 
 	return r.Body, nil
@@ -105,7 +105,7 @@ func fromFile(bot *gotgbot.Bot, fileId string) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	} else if r.StatusCode != 200 {
-		return nil, fmt.Errorf("non-200 response from telegram api [%s]: %v", r.StatusCode, r.Body)
+		return nil, fmt.Errorf("non-200 response from telegram api [%v]: %v", r.StatusCode, r.Body)
 	}
 
 	return r.Body, nil

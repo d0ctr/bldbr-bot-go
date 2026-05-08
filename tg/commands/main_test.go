@@ -28,13 +28,14 @@ func testParseArgs(t *testing.T, p parseArgsParameters) {
 
 func TestParseArgs(t *testing.T) {
 	tests := []parseArgsParameters {
-		{ " bar baz bax", 0, map[uint]string{0: "bar", 1: "baz", 2: "bax"} },
-		{ " bar baz bax", 1, map[uint]string{0: "bar baz bax"} },
-		{ " bar baz bax", 2, map[uint]string{0: "bar", 1: "baz bax"} },
-		{ " bar baz bax", 3, map[uint]string{0: "bar", 1: "baz", 2: "bax"} },
-		{ "", 0, map[uint]string{} },
-		{ "", 1, map[uint]string{} },
-		{ "", 2, map[uint]string{} },
+		{ "command bar baz bax", 0, map[uint]string{0: "bar", 1: "baz", 2: "bax"} },
+		{ "command bar baz bax", 1, map[uint]string{0: "bar baz bax"} },
+		{ "command bar baz bax", 2, map[uint]string{0: "bar", 1: "baz bax"} },
+		{ "command bar baz bax", 3, map[uint]string{0: "bar", 1: "baz", 2: "bax"} },
+		{ "command bar baz bax", 4, map[uint]string{0: "bar", 1: "baz", 2: "bax"} },
+		{ "command", 0, map[uint]string{} },
+		{ "command", 1, map[uint]string{} },
+		{ "command", 2, map[uint]string{} },
 	}
 
 	for _, parameters := range tests {

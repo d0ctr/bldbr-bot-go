@@ -19,6 +19,18 @@ var Answer = CommandDefinition{
 func answer(bot *gotgbot.Bot, ctx *ext.Context) error {
 	var tree *llm.Tree
 	var node *llm.TreeNode
+	var model llm.Model
+
+	{
+		modelName, _ := utils.GetChatValue(ctx, "llm-model")
+		var ok bool
+		model, ok = llm.GetOrDefault(modelName)
+
+		if !ok {
+			return fmt.Errorf("no model named [%s]", modelName)
+		}
+
+	}
 
 	if ctx.Message.ReplyToMessage != nil {
 		tree, node = llm.Heap.GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
@@ -54,7 +66,7 @@ func answer(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	endAction := withAction(bot, ctx, gotgbot.ChatActionTyping)
 	defer endAction()
-	r, err := llm.SendRequest(messages)
+	r, err := llm.SendRequest(model, messages)
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при получении ответа", err)
 		return fmt.Errorf("request resulted in an error: %w", err)

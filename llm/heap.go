@@ -1,7 +1,5 @@
 package llm
 
-import "slices"
-
 type _Heap struct {
 	tg map[string]*Tree
 }
@@ -46,7 +44,7 @@ func createTree(heapSpace _HeapSpace, treeId string, node *TreeNode) *Tree {
 	return tree
 }
 
-func (*_Heap) collectMessages(heapSpace _HeapSpace, treeId string, nodeId string) ([]*Message, bool) {
+func (*_Heap) collectMessages(heapSpace _HeapSpace, treeId string, nodeId string) ([]Message, bool) {
 	if nodeId == "" {
 		panic("node id is empty")
 	}
@@ -60,14 +58,7 @@ func (*_Heap) collectMessages(heapSpace _HeapSpace, treeId string, nodeId string
 		return nil, false
 	}
 
-	messages := []*Message{node.message}
-
-	for node.prev != nil {
-		node = node.prev
-		messages = append(messages, node.message)
-	}
-
-	slices.Reverse(messages)
+	messages := tree.CollectMessages(node)
 
 	return messages, true
 }

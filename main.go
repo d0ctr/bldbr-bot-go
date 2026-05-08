@@ -7,11 +7,13 @@ import (
 	"sync"
 	"syscall"
 
+	_ "github.com/d0ctr/bldbr-bot-go/shared"
 	"github.com/d0ctr/bldbr-bot-go/tg"
 )
 
 func main() {
 	tgClient, err := tg.NewTgClient()
+
 	if err != nil {
 		slog.Error("failed to start tg bot", err)
 		return

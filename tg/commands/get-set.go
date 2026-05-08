@@ -47,12 +47,6 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	redis, rtx := shared.Redis()
 
-	if redis == nil {
-		sendErrorMsg(bot, ctx, "Кэш недоступен.")
-		return fmt.Errorf("redis in unavailable (nil)")
-	}
-
-
 	key := toKey(ctx, name)
 	keyType, err := redis.Type(rtx, key).Result()
 	if err != nil {
@@ -111,12 +105,6 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
 	redis, rtx := shared.Redis()
 
-	if redis == nil {
-		sendErrorMsg(bot, ctx, "Кэш недоступен.")
-		return fmt.Errorf("redis is unavailable (nil)")
-	}
-
-
 	keys, err := redis.Keys(rtx, toKey(ctx, "*")).Result()
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при получении.", err)
@@ -144,11 +132,6 @@ func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func set(bot *gotgbot.Bot, ctx *ext.Context) error {
 	redis, rtx := shared.Redis()
-
-	if redis == nil {
-		sendErrorMsg(bot, ctx, "Кэш недоступен.")
-		return fmt.Errorf("redis in unavailable (nil)")
-	}
 
 	message := ctx.Message.ReplyToMessage
 	if message == nil {

@@ -29,10 +29,10 @@ func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, aut
 	return id, author, role
 }
 
-func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) *Message {
+func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) Message {
 	id, author, role := GetMessageParams(bot, source)
 
-	var content []*MessageContent
+	var content []MessageContent
 
 	if source.GetText() != "" {
 		content = append(content, NewMessageContentText(source.GetText()))
@@ -65,10 +65,10 @@ func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) *Message {
 
 	}
 
-	return &Message{ id, author, role, content }
+	return Message{ id, author, role, content }
 }
 
-func (*_Heap) GetTgTree(chatId int64) *Tree {
+func (_Heap) GetTgTree(chatId int64) *Tree {
 	treeId := strconv.FormatInt(chatId, 10)
 
 	if tree, ok := Heap.tg[treeId]; ok {
@@ -78,7 +78,7 @@ func (*_Heap) GetTgTree(chatId int64) *Tree {
 	}
 }
 
-func (*_Heap) AddTgTree(chatId int64, tree *Tree) {
+func (_Heap) AddTgTree(chatId int64, tree *Tree) {
 	treeId := strconv.FormatInt(chatId, 10)
 	Heap.tg[treeId] = tree
 }
@@ -93,7 +93,7 @@ func (t *Tree) GetTgNode(messageId int64) *TreeNode {
 	}
 }
 
-func (*_Heap) GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
+func (_Heap) GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
 	chatId := source.Chat.Id
 	tree := Heap.GetTgTree(chatId)
 	var node *TreeNode
@@ -121,6 +121,18 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 	chatId := ctx.Message.Chat.Id
 	var tree *Tree
 	var node *TreeNode
+	var model Model
+
+	{
+		modelName, _ := tg.GetChatValue(ctx, "llm-model")
+		var ok bool
+		model, ok = GetOrDefault(modelName)
+
+		if !ok {
+			return fmt.Errorf("no model named [%s]", modelName)
+		}
+
+	}
 
 	if ctx.Message.ReplyToMessage != nil {
 		tree, node = Heap.GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
@@ -155,7 +167,7 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 	endAction := tg.WithAction(bot, ctx, gotgbot.ChatActionTyping)
 	defer endAction()
 
-	r, err := SendRequest(messages)
+	r, err := SendRequest(model, messages)
 	if err != nil {
 		tg.SendErrorMsg(bot, ctx, "Ошибка при получении ответа", err)
 		return fmt.Errorf("request resulted in an error: %w", err)

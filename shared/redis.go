@@ -7,28 +7,24 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+var redisClient *redis.Client
+
 func Redis() (*redis.Client, context.Context) {
-	if (redisClient == nil) {
-		redisClient = getRedisClient()
-	}
 	return redisClient, context.Background()
 }
 
-var redisClient *redis.Client = nil 
-
-func getRedisClient() *redis.Client {
+func init() {
 	var logger = slog.Default().With("component", "redis")
 
 	url, ok := REDIS_URL.Get()
 	if !ok {
-		logger.Warn("redis url is empty")
-		return nil
+		logger.Error("redis url is empty")
+		return
 	}
 
 	opt, err := redis.ParseURL(url)
 	if err != nil {
-		logger.Error("failed to parse redis url", err)
-		return nil
+		logger.Error("failed to parse redis url: {}", err)
 	}
 
 	opt.OnConnect = func (context.Context, *redis.Conn) error {
@@ -36,5 +32,5 @@ func getRedisClient() *redis.Client {
 		return nil
 	}
 
-	return redis.NewClient(opt)
+	redisClient = redis.NewClient(opt)
 }

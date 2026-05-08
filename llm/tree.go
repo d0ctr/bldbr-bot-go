@@ -38,11 +38,11 @@ func (t *Tree) GetNode(nodeId string) *TreeNode {
 	}
 }
 
-func (t *Tree) CollectMessages(node *TreeNode) []*Message {
+func (t *Tree) CollectMessages(node *TreeNode) []Message {
 	if node == nil {
 		panic("empty node")
 	}
-	messages := []*Message{ node.message }
+	messages := []Message{ node.message }
 
 	for node.prev != nil {
 		node = node.prev
@@ -56,16 +56,16 @@ func (t *Tree) CollectMessages(node *TreeNode) []*Message {
 
 
 type TreeNode struct {
-	message *Message
+	message Message
 	prev *TreeNode
 	// next []*TreeNode
 }
 
-func NewTreeNode(message *Message) *TreeNode {
+func NewTreeNode(message Message) *TreeNode {
 	return &TreeNode{ message, nil }
 }
 
-func (n *TreeNode) id() string {
+func (n TreeNode) id() string {
 	return n.message.id
 }
 

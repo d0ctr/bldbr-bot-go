@@ -11,9 +11,10 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters"
 
+	"github.com/d0ctr/bldbr-bot-go/llm"
 	"github.com/d0ctr/bldbr-bot-go/shared"
 	"github.com/d0ctr/bldbr-bot-go/tg/commands"
-	"github.com/d0ctr/bldbr-bot-go/llm"
+	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 var logger = slog.Default().With("component", "tg-client")
@@ -44,6 +45,18 @@ func NewTgClient() (*TgClient, error) {
 
 	dispatcher := ext.NewDispatcher(&ext.DispatcherOpts{
 		Logger: logger,
+		Error: func(b *gotgbot.Bot, ctx *ext.Context, err error) ext.DispatcherAction {
+			text := fmt.Sprintf("Ошибка:\n<pre>%v</pre>", err)
+			if ctx.EffectiveMessage != nil {
+				ctx.EffectiveMessage.Reply(b, text, utils.GetDefaultMessageOpts())
+			} else if ctx.EffectiveChat != nil {
+				ctx.EffectiveChat.SendMessage(b, text, utils.GetDefaultMessageOpts())
+			}
+
+			slog.Error("got an error", err)
+
+			return ext.DispatcherActionNoop
+		},
 	})
 
 	updater := ext.NewUpdater(dispatcher, &ext.UpdaterOpts{

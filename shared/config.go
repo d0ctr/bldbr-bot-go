@@ -45,14 +45,12 @@ func (key ConfigKey[T]) Get() (T, bool) {
 	return v.(T), true
 }
 
-var _ = func () any {
+func init() {
 	if err := godotenvvault.Load(); err != nil {
 		fmt.Errorf("failed to acquire env variables: %w", err)
 		// panic();
 	}
-
-	return nil
-}()
+}
 
 type EnvKey string
 const (
@@ -60,6 +58,7 @@ const (
 	TELEGRAM_TOKEN EnvKey = "TELEGRAM_TOKEN"
 	ENV EnvKey = "ENV"
 	OPENAI_TOKEN EnvKey = "OPENAI_TOKEN"
+	XAI_TOKEN EnvKey = "XAI_TOKEN"
 )
 
 func (key EnvKey) Get() (string, bool) {

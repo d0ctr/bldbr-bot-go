@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"regexp"
+	"maps"
 	"strings"
 
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
@@ -15,7 +15,7 @@ type CommandDefinition struct {
 }
 
 var All = func() map[string]CommandDefinition {
-	all_a := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst, Voice, Answer}
+	all_a := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst, Voice, Answer, Model}
 
 	all_m := make(map[string]CommandDefinition, len(all_a))
 	
@@ -31,14 +31,17 @@ var withAction = utils.WithAction
 var handleHttpResponse = utils.HandleHttpResponse
 
 func parseArgs(text string, limit uint) map[uint]string {
-	var WORDS_RE = regexp.MustCompile(` ([^ ]+)`)
-
-	matches := WORDS_RE.FindAllStringSubmatch(text, -1)
-
-	words := make(map[uint]string, len(matches))
-	for i, match := range matches {
-		words[uint(i)] = match[1]
-	}
+	words := maps.Collect(func(yield func(uint, string) bool) {
+		for i, field := range strings.Fields(text) {
+			if i == 0 {
+				continue
+			} else {
+				if !yield(uint(i - 1), field) {
+					break
+				}
+			}
+		}
+	})
 
 	if (limit > 0 && limit <= uint(len(words))) {
 		args := make(map[uint]string, limit)
@@ -56,5 +59,6 @@ func parseArgs(text string, limit uint) map[uint]string {
 
 		return args
 	}
+
 	return words
 }

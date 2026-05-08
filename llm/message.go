@@ -19,19 +19,19 @@ type Message struct {
 	id string
 	author string
 	role MessageRole
-	content []*MessageContent
+	content []MessageContent
 }
 
-func FromText[T ~int | ~int64 | string](id T, author string, role MessageRole, text string) *Message {
+func FromText[T ~int | ~int64 | string](id T, author string, role MessageRole, text string) Message {
 	var idStr string
 	switch any(id).(type) {
 	case string: idStr = any(id).(string)
 	default: idStr = strconv.FormatInt(any(id).(int64), 10)
 	}
 
-	content := []*MessageContent{ NewMessageContentText(text) }
+	content := []MessageContent{ NewMessageContentText(text) }
 
-	return &Message{idStr, author, role, content}
+	return Message{idStr, author, role, content}
 }
 
 func (m Message) GetText() (string, bool) {
@@ -57,12 +57,12 @@ type MessageContent struct {
 	t MessageContentType
 }
 
-func NewMessageContentText(text string) *MessageContent {
-	return &MessageContent{ text, MessageMedia{}, _MessageContentTypeText }
+func NewMessageContentText(text string) MessageContent {
+	return MessageContent{ text, MessageMedia{}, _MessageContentTypeText }
 }
 
-func NewMessageContentMedia(fileId, base64, mediaType string) *MessageContent {
-	return &MessageContent{ "", MessageMedia{ fileId, base64, mediaType }, _MessageContentTypeMedia }
+func NewMessageContentMedia(fileId, base64, mediaType string) MessageContent {
+	return MessageContent{ "", MessageMedia{ fileId, base64, mediaType }, _MessageContentTypeMedia }
 }
 
 type MessageMedia struct {

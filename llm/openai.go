@@ -7,7 +7,11 @@ import (
 	"github.com/openai/openai-go/v3/responses"
 )
 
-func mapRole(r MessageRole) responses.EasyInputMessageRole {
+type _OpenAi struct {}
+
+var OpenAi = _OpenAi{}
+
+func (_OpenAi) mapRole(r MessageRole) responses.EasyInputMessageRole {
 	switch r {
 	case MESSAGE_ROLE_USER:
 		return responses.EasyInputMessageRoleUser
@@ -19,7 +23,7 @@ func mapRole(r MessageRole) responses.EasyInputMessageRole {
 	panic("unreachable")
 }
 
-func mapContentItem(c *MessageContent) responses.ResponseInputContentUnionParam{
+func (_OpenAi) mapContentItem(c MessageContent) responses.ResponseInputContentUnionParam{
 	var inputText *responses.ResponseInputTextParam = nil
 	var inputImage *responses.ResponseInputImageParam = nil
 	switch c.t {
@@ -39,7 +43,7 @@ func mapContentItem(c *MessageContent) responses.ResponseInputContentUnionParam{
 	}
 }
 
-func mapContentList(contents []*MessageContent) responses.EasyInputMessageContentUnionParam {
+func (_OpenAi) mapContentList(contents []MessageContent) responses.EasyInputMessageContentUnionParam {
 	if len(contents) == 1 && contents[0].t == _MessageContentTypeText {
 		text := contents[0].text
 		return responses.EasyInputMessageContentUnionParam{ OfString: openai.String(text) }
@@ -48,20 +52,20 @@ func mapContentList(contents []*MessageContent) responses.EasyInputMessageConten
 	var list responses.ResponseInputMessageContentListParam
 
 	for _, c := range contents {
-		list = append(list, mapContentItem(c))
+		list = append(list, OpenAi.mapContentItem(c))
 	}
 
 	return responses.EasyInputMessageContentUnionParam{ OfInputItemContentList: list }
 }
 
-func mapMessages(messages []Message) responses.ResponseNewParamsInputUnion {
+func (_OpenAi) mapMessages(messages []Message) responses.ResponseNewParamsInputUnion {
 	var items []responses.ResponseInputItemUnionParam
 
 	for _, message := range messages {
 		item := responses.ResponseInputItemUnionParam{
 			OfMessage: &responses.EasyInputMessageParam{
-				Role: mapRole(message.role),
-				Content: mapContentList(message.content),
+				Role: OpenAi.mapRole(message.role),
+				Content: OpenAi.mapContentList(message.content),
 			},
 		}
 
