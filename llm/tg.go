@@ -4,6 +4,7 @@ import (
 	base64Enc "encoding/base64"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strconv"
@@ -12,16 +13,17 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
+	"github.com/d0ctr/bldbr-bot-go/llm/types"
 	tg "github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
-func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, author string, role MessageRole) {
+func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, author string, role types.MessageRole) {
 	id = strconv.FormatInt(source.MessageId, 10)
 
 	if source.From.Id == bot.Id {
-		role = MESSAGE_ROLE_ASSISTANT
+		role = types.MESSAGE_ROLE_ASSISTANT
 	} else {
-		role = MESSAGE_ROLE_USER
+		role = types.MESSAGE_ROLE_USER
 	}
 
 	author = fmt.Sprintf(`%s "%s" %s`, source.From.FirstName, source.From.Username, source.From.LastName)
@@ -29,13 +31,14 @@ func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, aut
 	return id, author, role
 }
 
-func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) Message {
+func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) types.Message {
+	logger := slog.With("component", "tg-to-llm")
 	id, author, role := GetMessageParams(bot, source)
 
-	var content []MessageContent
+	var content []types.MessageContent
 
 	if source.GetText() != "" {
-		content = append(content, NewMessageContentText(source.GetText()))
+		content = append(content, types.NewMessageContentText(source.GetText()))
 	}
 
 	if len(source.Photo) > 0 {
@@ -58,29 +61,29 @@ func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) Message {
 				mediaType = "image/jpeg"
 			}
 
-			messageMedia := NewMessageContentMedia(file.FileId, base64, mediaType)
+			messageMedia := types.NewMessageContentMedia(file.FileId, base64, mediaType)
 
 			content = append(content, messageMedia)
 		}
 
 	}
 
-	return Message{ id, author, role, content }
+	return types.NewMessage(id, author, role, content)
 }
 
-func (_Heap) GetTgTree(chatId int64) *Tree {
+func GetTgTree(chatId int64) *Tree {
 	treeId := strconv.FormatInt(chatId, 10)
 
-	if tree, ok := Heap.tg[treeId]; ok {
+	if tree, ok := heap.tg[treeId]; ok {
 		return tree
 	} else {
 		return nil
 	}
 }
 
-func (_Heap) AddTgTree(chatId int64, tree *Tree) {
+func AddTgTree(chatId int64, tree *Tree) {
 	treeId := strconv.FormatInt(chatId, 10)
-	Heap.tg[treeId] = tree
+	heap.tg[treeId] = tree
 }
 
 func (t *Tree) GetTgNode(messageId int64) *TreeNode {
@@ -93,9 +96,9 @@ func (t *Tree) GetTgNode(messageId int64) *TreeNode {
 	}
 }
 
-func (_Heap) GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
+func GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
 	chatId := source.Chat.Id
-	tree := Heap.GetTgTree(chatId)
+	tree := GetTgTree(chatId)
 	var node *TreeNode
 
 	if tree == nil {
@@ -103,7 +106,7 @@ func (_Heap) GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree
 		node = NewTreeNode(message)
 		tree = NewTree(node)
 		
-		Heap.AddTgTree(chatId, tree)
+		AddTgTree(chatId, tree)
 	} else {
 		node = tree.GetTgNode(source.MessageId)
 	}
@@ -121,12 +124,12 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 	chatId := ctx.Message.Chat.Id
 	var tree *Tree
 	var node *TreeNode
-	var model Model
+	var model types.Model
 
 	{
 		modelName, _ := tg.GetChatValue(ctx, "llm-model")
 		var ok bool
-		model, ok = GetOrDefault(modelName)
+		model, ok = types.GetOrDefault(modelName)
 
 		if !ok {
 			return fmt.Errorf("no model named [%s]", modelName)
@@ -135,11 +138,11 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 	}
 
 	if ctx.Message.ReplyToMessage != nil {
-		tree, node = Heap.GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
+		tree, node = GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
 	}
 
 	if tree == nil {
-		tree = Heap.GetTgTree(chatId)
+		tree = GetTgTree(chatId)
 	}
 
 	{
@@ -150,7 +153,7 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 		if tree == nil {
 			tree = NewTree(node)
 
-			Heap.AddTgTree(ctx.Message.Chat.Id, tree)
+			AddTgTree(ctx.Message.Chat.Id, tree)
 		} else if prev == nil {
 			tree.AddNode(node)
 		} else {
@@ -173,7 +176,7 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return fmt.Errorf("request resulted in an error: %w", err)
 	}
 
-	text, ok := r.GetText()
+	text, ok := r.Text()
 	if !ok {
 		tg.SendErrorMsg(bot, ctx, "В ответе не было текста...")
 		return fmt.Errorf("no text in the response: %v", r)

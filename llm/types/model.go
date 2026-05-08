@@ -1,4 +1,4 @@
-package llm
+package types
 
 import (
 	"maps"
@@ -20,6 +20,10 @@ type Model struct {
 
 func (m Model) Name() string {
 	return m.name
+}
+
+func (m Model) Provider() string {
+	return m.provider
 }
 
 // predifined list although not exclusive

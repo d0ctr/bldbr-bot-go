@@ -1,15 +1,12 @@
 package llm
 
 import (
-	"context"
 	"fmt"
-	"slices"
 
-	"github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/responses"
 	"github.com/sym01/htmlsanitizer"
 
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"github.com/d0ctr/bldbr-bot-go/llm/openai"
+	"github.com/d0ctr/bldbr-bot-go/llm/types"
 )
 
 const prompt = `# DESCRIPTION
@@ -47,123 +44,19 @@ Formatted text must always be formatted using HTML-like style. It includes follo
 - Programming language can't be specified for standalone "code" tags.
 `
 
-func parseResponse(res *responses.Response, err error) (Message, error) {
-	if err != nil {
-		return Message{}, fmt.Errorf("api error: %v", err)
+func SendRequest(model types.Model, messages []types.Message) (types.Message, error) {
+	req := openai.BuildRequest(model, prompt, messages)
+
+	if res, err := openai.SendRequest(model, req); err != nil {
+		return types.Message{}, err
+	} else if text, err := openai.FindFirstText(res); err != nil {
+		return types.Message{}, err
+	} else {
+		text = sanitizeHtml(text)
+
+		msg := types.FromText("", "", types.MESSAGE_ROLE_ASSISTANT, text)
+		return msg, nil
 	}
-
-	if len(res.Output) == 0 {
-		return Message{}, fmt.Errorf("received an error: %v", res.Error)
-	}
-
-	for _, item := range res.Output {
-		if item.Type == "message" && item.Status == "completed" {
-			for _, content := range item.Content {
-				if content.Type == "output_text" {
-					text := sanitizeHtml(content.Text)
-					result := FromText("", "", MESSAGE_ROLE_ASSISTANT, text)
-					return result, nil
-				}
-			}
-		}
-	}
-
-	return Message{}, fmt.Errorf("no valid response: %v", res.Output)
-}
-
-func sendRequestOpenAi(model Model, messages []Message) (Message, error) {
-	fixedMessages := fixMessages(messages)
-
-	client := shared.OpenAi()
-	if client == nil {
-		return Message{}, fmt.Errorf("openai service is not available")
-	}
-
-	body := responses.ResponseNewParams{
-		Instructions: openai.String(prompt),
-		Store: openai.Bool(false),
-		Input: OpenAi.mapMessages(fixedMessages),
-		ToolChoice: responses.ResponseNewParamsToolChoiceUnion{
-			OfToolChoiceMode: openai.Opt(responses.ToolChoiceOptionsAuto),
-		},
-		Tools: []responses.ToolUnionParam{
-			responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch),
-		},
-		Reasoning: responses.ReasoningParam{
-			Effort: responses.ReasoningEffortMedium,
-			Summary: openai.ReasoningSummaryAuto,
-		},
-		Model: model.name,
-	}
-
-	return parseResponse(client.Responses.New(context.Background(), body))
-}
-
-func sendRequestGrok(model Model, messages []Message) (Message, error) {
-	fixedMessages := fixMessages(messages)
-
-	client := shared.XAi()
-	if client == nil {
-		return Message{}, fmt.Errorf("xai service is not available")
-	}
-
-	xSearchTool := responses.ToolParamOfCustom("x_search")
-	xSearchTool.OfCustom.Type = "x_search"
-
-	webSearchTool := responses.ToolParamOfCustom("web_search")
-	webSearchTool.OfCustom.Type = "web_search"
-
-	body := responses.ResponseNewParams{
-		Instructions: openai.String(prompt),
-		Store: openai.Bool(false),
-		Input: OpenAi.mapMessages(fixedMessages),
-		Tools: []responses.ToolUnionParam{ xSearchTool, webSearchTool },
-		Reasoning: responses.ReasoningParam{
-			Effort: responses.ReasoningEffortLow,
-			Summary: openai.ReasoningSummaryAuto,
-		},
-		Model: model.name,
-	}
-
-	return parseResponse(client.Responses.New(context.Background(), body))
-}
-
-func SendRequest(model Model, messages []Message) (Message, error) {
-	var result Message
-	var err error
-
-	switch model.provider {
-		case MODEL_PROVIDER_XAI: result, err = sendRequestGrok(model, messages);
-		case MODEL_PROVIDER_OPENAI: result, err = sendRequestOpenAi(model, messages);
-		default: return Message{}, fmt.Errorf("undefined model provider [%v]", model.provider);
-	}
-
-	return result, err
-}
-
-func containsMediaContent(contents []MessageContent) bool {
-	return slices.ContainsFunc(contents, func(content MessageContent) bool {
-		return content.t == _MessageContentTypeMedia
-	})
-}
-
-func fixMessages(messages []Message) []Message {
-	// if len(messages) == 1 or first message contains media
-	// -> then role must always be a user role
-
-	var fixed []Message
-	for _, message := range messages {
-		if len(message.content) == 0 {
-			continue
-		}
-		fixed = append(fixed, message)
-	}
-
-	if len(fixed) == 1 || containsMediaContent(fixed[0].content)  {
-		fixed[0].role = MESSAGE_ROLE_USER
-	}
-
-	return fixed
 }
 
 var sanitizer *htmlsanitizer.HTMLSanitizer

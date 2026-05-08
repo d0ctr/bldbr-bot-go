@@ -6,7 +6,7 @@ import (
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/d0ctr/bldbr-bot-go/llm"
+	"github.com/d0ctr/bldbr-bot-go/llm/types"
 	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
@@ -23,7 +23,7 @@ func model(b *gotgbot.Bot, ctx *ext.Context) error {
 	available := &strings.Builder{}
 
 	available.WriteString("Доступные модели:\n")
-	for _, name := range llm.GetModelNames() {
+	for _, name := range types.GetModelNames() {
 		fmt.Fprintf(available, "<code>  -</code> <code>%s</code>\n", name)
 	}
 
@@ -38,14 +38,14 @@ func model(b *gotgbot.Bot, ctx *ext.Context) error {
 			return err
 		}
 
-		if mdl, ok := llm.GetOrDefault(cur); !ok {
+		if mdl, ok := types.GetOrDefault(cur); !ok {
 			return fmt.Errorf("unknown model [%v]", cur)
 		} else {
 			fmt.Fprintf(available, "Текущая модель: <code>%s</code>", mdl.Name())
 			return nil
 		}
 	} else {
-		mdl, ok := llm.GetOrDefault(name)
+		mdl, ok := types.GetOrDefault(name)
 		if !ok {
 			sendAvailable()
 			return fmt.Errorf("unknown model [%s]", name)

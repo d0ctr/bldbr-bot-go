@@ -7,6 +7,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"github.com/d0ctr/bldbr-bot-go/llm"
+	"github.com/d0ctr/bldbr-bot-go/llm/types"
 	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
@@ -19,12 +20,12 @@ var Answer = CommandDefinition{
 func answer(bot *gotgbot.Bot, ctx *ext.Context) error {
 	var tree *llm.Tree
 	var node *llm.TreeNode
-	var model llm.Model
+	var model types.Model
 
 	{
 		modelName, _ := utils.GetChatValue(ctx, "llm-model")
 		var ok bool
-		model, ok = llm.GetOrDefault(modelName)
+		model, ok = types.GetOrDefault(modelName)
 
 		if !ok {
 			return fmt.Errorf("no model named [%s]", modelName)
@@ -33,23 +34,23 @@ func answer(bot *gotgbot.Bot, ctx *ext.Context) error {
 	}
 
 	if ctx.Message.ReplyToMessage != nil {
-		tree, node = llm.Heap.GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
+		tree, node = llm.GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
 	}
 
 	if tree == nil {
-		tree = llm.Heap.GetTgTree(ctx.Message.Chat.Id)
+		tree = llm.GetTgTree(ctx.Message.Chat.Id)
 	}
 
 	if query, ok := parseArgs(ctx.Message.GetText(), 1)[0]; ok {
 		id, author, role := llm.GetMessageParams(bot, ctx.Message)
 		prev := node
-		message := llm.FromText(id, author, role, query)
+		message := types.FromText(id, author, role, query)
 		node = llm.NewTreeNode(message)
 
 		if tree == nil {
 			tree = llm.NewTree(node)
 
-			llm.Heap.AddTgTree(ctx.Message.Chat.Id, tree)
+			llm.AddTgTree(ctx.Message.Chat.Id, tree)
 		} else if prev == nil {
 			tree.AddNode(node)
 		} else {
@@ -72,7 +73,7 @@ func answer(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return fmt.Errorf("request resulted in an error: %w", err)
 	}
 
-	text, ok := r.GetText()
+	text, ok := r.Text()
 	if !ok {
 		sendErrorMsg(bot, ctx, "В ответе не было текста...")
 		return fmt.Errorf("no text in the response: %v", r)

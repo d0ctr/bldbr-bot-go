@@ -1,6 +1,10 @@
 package llm
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/d0ctr/bldbr-bot-go/llm/types"
+)
 
 type Tree struct {
 	nodes map[string]*TreeNode
@@ -38,11 +42,11 @@ func (t *Tree) GetNode(nodeId string) *TreeNode {
 	}
 }
 
-func (t *Tree) CollectMessages(node *TreeNode) []Message {
+func (t *Tree) CollectMessages(node *TreeNode) []types.Message {
 	if node == nil {
 		panic("empty node")
 	}
-	messages := []Message{ node.message }
+	messages := []types.Message{ node.message }
 
 	for node.prev != nil {
 		node = node.prev
@@ -56,17 +60,17 @@ func (t *Tree) CollectMessages(node *TreeNode) []Message {
 
 
 type TreeNode struct {
-	message Message
+	message types.Message
 	prev *TreeNode
 	// next []*TreeNode
 }
 
-func NewTreeNode(message Message) *TreeNode {
+func NewTreeNode(message types.Message) *TreeNode {
 	return &TreeNode{ message, nil }
 }
 
 func (n TreeNode) id() string {
-	return n.message.id
+	return n.message.Id()
 }
 
 func (n *TreeNode) append(next *TreeNode) {
