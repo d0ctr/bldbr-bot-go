@@ -83,6 +83,8 @@ func (tg *TgClient) Start(wg *sync.WaitGroup) {
 
 	tg.dispatcher.AddHandler(handlers.NewMessage(tg.isReplyToBot(), llm.HandleTgChain))
 
+	tg.bot.DeleteWebhook(&gotgbot.DeleteWebhookOpts{ DropPendingUpdates: false })
+
 	tg.updater.StartPolling(tg.bot, nil)
 	logger.Info("telegram bot has started")
 
