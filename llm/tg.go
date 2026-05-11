@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
@@ -17,10 +18,10 @@ import (
 	tg "github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
-func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, author string, role types.MessageRole) {
+func getMessageParams(b *gotgbot.Bot, source *gotgbot.Message) (id string, author string, role types.MessageRole) {
 	id = strconv.FormatInt(source.MessageId, 10)
 
-	if source.From.Id == bot.Id {
+	if source.From.Id == b.Id {
 		role = types.MESSAGE_ROLE_ASSISTANT
 	} else {
 		role = types.MESSAGE_ROLE_USER
@@ -31,14 +32,43 @@ func GetMessageParams(bot *gotgbot.Bot, source *gotgbot.Message) (id string, aut
 	return id, author, role
 }
 
-func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) types.Message {
+func fromTgMessage(b *gotgbot.Bot, source *gotgbot.Message) (types.Message, bool) {
 	logger := slog.With("component", "tg-to-llm")
-	id, author, role := GetMessageParams(bot, source)
+	id, author, role := getMessageParams(b, source)
 
 	var content []types.MessageContent
 
-	if source.GetText() != "" {
-		content = append(content, types.NewMessageContentText(source.GetText()))
+	{
+		text := source.OriginalMDV2()
+		if text == "" {
+			text = source.OriginalCaptionMDV2()
+		}
+
+		// cut command if present
+		if strings.HasPrefix(text, "/") {
+			start := strings.IndexFunc(text, unicode.IsSpace)
+			// present is not the last byte
+			if start != -1 && start != (len(text) - 1) {
+				text = text[start + 1:]
+			} else {
+				text = ""
+			}
+		}
+
+		if source.Quote != nil {
+			quoteBuilder := strings.Builder{}
+
+			for line := range strings.Lines(source.Quote.Text) {
+				fmt.Fprintf(&quoteBuilder, "> %s\n", line)
+			}
+
+			quoteBuilder.WriteString("\n")
+			text = quoteBuilder.String() + text
+		}
+
+		if text != "" {
+			content = append(content, types.NewMessageContentText(source.OriginalMDV2()))
+		}
 	}
 
 	if len(source.Photo) > 0 {
@@ -46,9 +76,9 @@ func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) types.Message {
 			return int((a.Height + a.Width) - (b.Height + b.Width))
 		})
 
-		if file, err := bot.GetFile(image.FileId, nil); err != nil {
+		if file, err := b.GetFile(image.FileId, nil); err != nil {
 			logger.Error("failed to get file", err)
-		} else if r, err := http.Get(file.URL(bot, nil)); err != nil {
+		} else if r, err := http.Get(file.URL(b, nil)); err != nil {
 			logger.Error("failed to download the file", err)
 		} else if r.StatusCode != 200 {
 			logger.Error("failed to download the file with status code [{}]", r.Status)
@@ -68,10 +98,10 @@ func FromTgMessage(bot *gotgbot.Bot, source *gotgbot.Message) types.Message {
 
 	}
 
-	return types.NewMessage(id, author, role, content)
+	return types.NewMessage(id, author, role, content), len(content) > 0
 }
 
-func GetTgTree(chatId int64) *Tree {
+func getTgTree(chatId int64) *Tree {
 	treeId := strconv.FormatInt(chatId, 10)
 
 	if tree, ok := heap.tg[treeId]; ok {
@@ -81,12 +111,12 @@ func GetTgTree(chatId int64) *Tree {
 	}
 }
 
-func AddTgTree(chatId int64, tree *Tree) {
+func addTgTree(chatId int64, tree *Tree) {
 	treeId := strconv.FormatInt(chatId, 10)
 	heap.tg[treeId] = tree
 }
 
-func (t *Tree) GetTgNode(messageId int64) *TreeNode {
+func (t *Tree) getTgNode(messageId int64) *TreeNode {
 	nodeId := strconv.FormatInt(messageId, 10)
 
 	if node, ok := t.nodes[nodeId]; ok {
@@ -96,23 +126,24 @@ func (t *Tree) GetTgNode(messageId int64) *TreeNode {
 	}
 }
 
-func GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
+func getTgTreeWithNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
 	chatId := source.Chat.Id
-	tree := GetTgTree(chatId)
+	tree := getTgTree(chatId)
 	var node *TreeNode
 
 	if tree == nil {
-		message := FromTgMessage(bot, source)
-		node = NewTreeNode(message)
-		tree = NewTree(node)
-		
-		AddTgTree(chatId, tree)
+		if message, ok := fromTgMessage(b, source); ok {
+			node = NewTreeNode(message)
+			tree = NewTree(node)
+
+			addTgTree(chatId, tree)
+			return tree, node
+		}
 	} else {
-		node = tree.GetTgNode(source.MessageId)
+		node = tree.getTgNode(source.MessageId)
 	}
 
-	if node == nil {
-		message := FromTgMessage(bot, source)
+	if message, ok := fromTgMessage(b, source); ok {
 		node = NewTreeNode(message)
 		tree.AddNode(node)
 	}
@@ -120,9 +151,18 @@ func GetTgTreeWithNode(bot *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeN
 	return tree, node
 }
 
-func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
+func HandleTgChain(b *gotgbot.Bot, ctx *ext.Context) error {
+	return RespondToTgMessage(false, b, ctx)
+}
+
+func HandleTgCommand(b *gotgbot.Bot, ctx *ext.Context) error {
+	return RespondToTgMessage(true, b, ctx)
+}
+
+func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	chatId := ctx.Message.Chat.Id
 	var tree *Tree
+	var prev *TreeNode
 	var node *TreeNode
 	var model types.Model
 
@@ -138,22 +178,18 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 	}
 
 	if ctx.Message.ReplyToMessage != nil {
-		tree, node = GetTgTreeWithNode(bot, ctx.Message.ReplyToMessage)
+		tree, node = getTgTreeWithNode(b, ctx.Message.ReplyToMessage)
 	}
 
 	if tree == nil {
-		tree = GetTgTree(chatId)
+		tree = getTgTree(chatId)
 	}
 
-	{
-		prev := node
-		message := FromTgMessage(bot, ctx.Message)
-		node = NewTreeNode(message)
-
+	if message, ok := fromTgMessage(b, ctx.Message); ok {
+		prev, node = node, NewTreeNode(message)
 		if tree == nil {
 			tree = NewTree(node)
-
-			AddTgTree(ctx.Message.Chat.Id, tree)
+			addTgTree(chatId, tree)
 		} else if prev == nil {
 			tree.AddNode(node)
 		} else {
@@ -162,35 +198,40 @@ func HandleTgChain(bot *gotgbot.Bot, ctx *ext.Context) error {
 	}
 
 	if node == nil {
-		panic("this is a reply message it at least must have a new node created from the replyed message")
+		if command {
+			tg.SendErrorMsg(b, ctx, "Добавь к команде запрос и/или отправь её в ответ на другое сообщение.")
+			return tg.FmtNoSendError("command is missing a query")
+		} else {
+			panic("this is a reply message, it at least must have a new node created from the replied message")
+		}
 	}
 
 	messages := tree.CollectMessages(node)
 
-	endAction := tg.WithAction(bot, ctx, gotgbot.ChatActionTyping)
+	endAction := tg.WithAction(b, ctx, gotgbot.ChatActionTyping)
 	defer endAction()
 
 	r, err := SendRequest(model, messages)
 	if err != nil {
-		tg.SendErrorMsg(bot, ctx, "Ошибка при получении ответа", err)
-		return fmt.Errorf("request resulted in an error: %w", err)
+		tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
+		return tg.FmtNoSendError("request resulted in an error: %w", err)
 	}
 
 	text, ok := r.Text()
 	if !ok {
-		tg.SendErrorMsg(bot, ctx, "В ответе не было текста...")
-		return fmt.Errorf("no text in the response: %v", r)
+		tg.SendErrorMsg(b, ctx, "В ответе не было текста...")
+		return tg.FmtNoSendError("no text in the response: %v", r)
 	}
 
-	tgMessage, err := ctx.Message.ReplyMessage(bot, text, tg.GetDefaultMessageOpts())
+	tgMessage, err := ctx.Message.ReplyMessage(b, text, tg.GetDefaultMessageOpts())
 	if err != nil {
-		tg.SendErrorMsg(bot, ctx, "ошибка при отправке ответа", err)
+		return fmt.Errorf("error on send: %w", err)
 	}
 
-	prev := node
-	message := FromTgMessage(bot, tgMessage)
-	node = NewTreeNode(message)
-	tree.AppendNode(prev, node)
+	if message, ok := fromTgMessage(b, tgMessage); ok {
+		prev, node = node, NewTreeNode(message)
+		tree.AppendNode(prev, node)
+	}
 
 	return nil
 }

@@ -19,8 +19,31 @@ type htmlizer struct {
 	p *parser.Parser
 	html *html.Renderer
 	md *md.Renderer
-	s *htmlsanitizer.HTMLSanitizer
-	lineBreak bool
+}
+
+var sanitizer *htmlsanitizer.HTMLSanitizer
+
+func init() {
+	sanitizer = htmlsanitizer.NewHTMLSanitizer()
+
+	sanitizer.AllowList.Tags = []*htmlsanitizer.Tag{
+		{ Name: "b",          Attr: []string{},               URLAttr: []string{} },
+		{ Name: "strong",     Attr: []string{},               URLAttr: []string{} },
+		{ Name: "i",          Attr: []string{},               URLAttr: []string{} },
+		{ Name: "em",         Attr: []string{},               URLAttr: []string{} },
+		{ Name: "u",          Attr: []string{},               URLAttr: []string{} },
+		{ Name: "ins",        Attr: []string{},               URLAttr: []string{} },
+		{ Name: "s",          Attr: []string{},               URLAttr: []string{} },
+		{ Name: "strike",     Attr: []string{},               URLAttr: []string{} },
+		{ Name: "del",        Attr: []string{},               URLAttr: []string{} },
+		{ Name: "span",       Attr: []string{ "tg-spoiler" }, URLAttr: []string{} },
+		{ Name: "tg-spoiler", Attr: []string{},               URLAttr: []string{} },
+		{ Name: "a",          Attr: []string{},               URLAttr: []string{"href"} },
+		{ Name: "code",       Attr: []string{ "class" },      URLAttr: []string{} },
+		{ Name: "pre",        Attr: []string{},               URLAttr: []string{} },
+		{ Name: "blockquote", Attr: []string{ "expandable" }, URLAttr: []string{} },
+	}
+
 }
 
 func new() htmlizer {
@@ -40,26 +63,6 @@ func new() htmlizer {
 	izer.md = md.NewRenderer()
 
 	izer.listIndent = list.New()
-
-	izer.s = htmlsanitizer.NewHTMLSanitizer()
-
-	izer.s.AllowList.Tags = []*htmlsanitizer.Tag{
-		{ Name: "b",          Attr: []string{},               URLAttr: []string{} },
-		{ Name: "strong",     Attr: []string{},               URLAttr: []string{} },
-		{ Name: "i",          Attr: []string{},               URLAttr: []string{} },
-		{ Name: "em",         Attr: []string{},               URLAttr: []string{} },
-		{ Name: "u",          Attr: []string{},               URLAttr: []string{} },
-		{ Name: "ins",        Attr: []string{},               URLAttr: []string{} },
-		{ Name: "s",          Attr: []string{},               URLAttr: []string{} },
-		{ Name: "strike",     Attr: []string{},               URLAttr: []string{} },
-		{ Name: "del",        Attr: []string{},               URLAttr: []string{} },
-		{ Name: "span",       Attr: []string{ "tg-spoiler" }, URLAttr: []string{} },
-		{ Name: "tg-spoiler", Attr: []string{},               URLAttr: []string{} },
-		{ Name: "a",          Attr: []string{},               URLAttr: []string{"href"} },
-		{ Name: "code",       Attr: []string{ "class" },      URLAttr: []string{} },
-		{ Name: "pre",        Attr: []string{},               URLAttr: []string{} },
-		{ Name: "blockquote", Attr: []string{ "expandable" }, URLAttr: []string{} },
-	}
 
 	return izer
 }
@@ -209,7 +212,7 @@ func htmlize(text string, unsanitized bool, debug io.Writer) (string, error) {
 
 	if unsanitized {
 		return string(textB), nil
-	} else if sanitized, err := htmlizer.s.Sanitize(textB); err != nil {
+	} else if sanitized, err := sanitizer.Sanitize(textB); err != nil {
 		return string(textB), err
 	} else {
 		return string(sanitized), nil

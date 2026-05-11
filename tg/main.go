@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
@@ -47,10 +48,13 @@ func NewTgClient() (*TgClient, error) {
 		Logger: logger,
 		Error: func(b *gotgbot.Bot, ctx *ext.Context, err error) ext.DispatcherAction {
 			text := fmt.Sprintf("Ошибка:\n<pre>%v</pre>", err)
-			if ctx.EffectiveMessage != nil {
-				ctx.EffectiveMessage.Reply(b, text, utils.GetDefaultMessageOpts())
-			} else if ctx.EffectiveChat != nil {
-				ctx.EffectiveChat.SendMessage(b, text, utils.GetDefaultMessageOpts())
+
+			if _, ok := err.(utils.NoSendError); !ok {
+				if ctx.EffectiveMessage != nil {
+					ctx.EffectiveMessage.Reply(b, text, utils.GetDefaultMessageOpts())
+				} else if ctx.EffectiveChat != nil {
+					ctx.EffectiveChat.SendMessage(b, text, utils.GetDefaultMessageOpts())
+				}
 			}
 
 			slog.Error("got an error", err)
@@ -72,7 +76,8 @@ func (tg *TgClient) isReplyToBot() filters.Message {
 	return func (msg *gotgbot.Message) bool {
 		return msg.ReplyToMessage != nil &&
 		msg.ReplyToMessage.From.Id == tg.bot.Id &&
-		msg.From.Id != tg.bot.Id
+		msg.From.Id != tg.bot.Id &&
+		!strings.HasPrefix(msg.ReplyToMessage.GetText(), "! ")
 	}
 }
 

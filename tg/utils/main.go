@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -64,3 +65,10 @@ func HandleHttpResponse(bot *gotgbot.Bot, ctx *ext.Context, entity string, r *ht
 
 	return nil
 }
+
+type NoSendError error
+
+func FmtNoSendError(format string, args ...any) (err error) {
+	return NoSendError(fmt.Errorf(format, args...))
+}
+
