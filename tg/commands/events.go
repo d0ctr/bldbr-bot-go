@@ -108,6 +108,8 @@ func (_events) events(b *gotgbot.Bot, ctx *ext.Context) (err error) {
 						minutes,
 					)
 				}
+
+				fmt.Fprint(responseBuilder, "\n")
 			}
 		}
 

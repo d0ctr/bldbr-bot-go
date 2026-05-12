@@ -77,7 +77,7 @@ func (tg *TgClient) isReplyToBot() filters.Message {
 		return msg.ReplyToMessage != nil &&
 		msg.ReplyToMessage.From.Id == tg.bot.Id &&
 		msg.From.Id != tg.bot.Id &&
-		!strings.HasPrefix(msg.ReplyToMessage.GetText(), "! ")
+		!strings.HasPrefix(msg.GetText(), "! ")
 	}
 }
 

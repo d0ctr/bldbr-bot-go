@@ -3,6 +3,7 @@ package discord
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -84,7 +85,6 @@ func GetEvents(guildId string) (result []Event, err error) {
 			}
 		}
 
-		logger.Debug("got event [{}]", e.Name)
 		event := Event{
 			Entity: Entity{
 				Id: e.ID,
@@ -107,6 +107,9 @@ func GetEvents(guildId string) (result []Event, err error) {
 		result = append(result, event)
 	}
 
-	logger.Debug("returning {} events", len(result))
+	slices.SortStableFunc(result, func(a, b Event) int {
+		return a.Start.Compare(b.Start)
+	})
+
 	return result, err
 }
