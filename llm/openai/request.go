@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"d0ctr/bldbr-bot/llm/types"
+	"d0ctr/bldbr-bot/shared"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
 )

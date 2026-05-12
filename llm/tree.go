@@ -3,7 +3,7 @@ package llm
 import (
 	"slices"
 
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
+	"d0ctr/bldbr-bot/llm/types"
 )
 
 type Tree struct {

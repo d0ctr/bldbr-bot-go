@@ -3,7 +3,7 @@ package openai
 import (
 	"fmt"
 
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
+	"d0ctr/bldbr-bot/llm/types"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
 )

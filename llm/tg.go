@@ -14,8 +14,8 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
-	tg "github.com/d0ctr/bldbr-bot-go/tg/utils"
+	"d0ctr/bldbr-bot/llm/types"
+	tg "d0ctr/bldbr-bot/tg/utils"
 )
 
 func getMessageParams(b *gotgbot.Bot, source *gotgbot.Message) (id string, author string, role types.MessageRole) {
@@ -44,10 +44,26 @@ func fromTgMessage(b *gotgbot.Bot, source *gotgbot.Message) (types.Message, bool
 			text = source.OriginalCaptionMDV2()
 		}
 
+		cutFirstWord := false
 		// cut command if present
 		if strings.HasPrefix(text, "/") {
+			cutFirstWord = true
+		} else if strings.HasPrefix(text, "@") {
+			var firstWord string
+			strings.FieldsSeq(text)(func(word string) bool {
+				firstWord = word
+				return false
+			})
+
+
+			if firstWord[1:] == b.Username {
+				cutFirstWord = true
+			}
+		}
+
+		if cutFirstWord {
 			start := strings.IndexFunc(text, unicode.IsSpace)
-			// present is not the last byte
+			// is not the last byte
 			if start != -1 && start != (len(text) - 1) {
 				text = text[start + 1:]
 			} else {

@@ -11,7 +11,7 @@ import (
 	"github.com/openai/openai-go/v3"
 	"github.com/google/uuid"
 
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"d0ctr/bldbr-bot/shared"
 )
 
 var Voice = CommandDefinition{

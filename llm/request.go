@@ -3,9 +3,9 @@ package llm
 import (
 	"log/slog"
 
-	"github.com/d0ctr/bldbr-bot-go/llm/htmlizer"
-	"github.com/d0ctr/bldbr-bot-go/llm/openai"
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
+	"d0ctr/bldbr-bot/llm/htmlizer"
+	"d0ctr/bldbr-bot/llm/openai"
+	"d0ctr/bldbr-bot/llm/types"
 )
 
 const prompt = `# DESCRIPTION

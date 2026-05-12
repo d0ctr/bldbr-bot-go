@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"d0ctr/bldbr-bot/shared"
 	gredis "github.com/redis/go-redis/v9"
 )
 

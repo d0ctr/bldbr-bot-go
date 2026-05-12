@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/d0ctr/bldbr-bot-go/shared"
+	"d0ctr/bldbr-bot/shared"
 )
 
 var logger *slog.Logger

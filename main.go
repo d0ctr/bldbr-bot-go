@@ -7,8 +7,8 @@ import (
 	"sync"
 	"syscall"
 
-	_ "github.com/d0ctr/bldbr-bot-go/shared"
-	"github.com/d0ctr/bldbr-bot-go/tg"
+	_ "d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/tg"
 )
 
 func main() {

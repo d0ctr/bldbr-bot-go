@@ -4,7 +4,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
-	"github.com/d0ctr/bldbr-bot-go/llm"
+	"d0ctr/bldbr-bot/llm"
 )
 
 var Answer = CommandDefinition{

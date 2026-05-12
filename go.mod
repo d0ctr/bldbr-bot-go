@@ -1,4 +1,4 @@
-module github.com/d0ctr/bldbr-bot-go
+module d0ctr/bldbr-bot
 
 go 1.26.0
 

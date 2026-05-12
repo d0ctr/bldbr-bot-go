@@ -6,8 +6,8 @@ import (
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
-	"github.com/d0ctr/bldbr-bot-go/tg/utils"
+	"d0ctr/bldbr-bot/llm/types"
+	"d0ctr/bldbr-bot/tg/utils"
 )
 
 

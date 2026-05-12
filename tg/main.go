@@ -12,10 +12,10 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters"
 
-	"github.com/d0ctr/bldbr-bot-go/llm"
-	"github.com/d0ctr/bldbr-bot-go/shared"
-	"github.com/d0ctr/bldbr-bot-go/tg/commands"
-	"github.com/d0ctr/bldbr-bot-go/tg/utils"
+	"d0ctr/bldbr-bot/llm"
+	"d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/tg/commands"
+	"d0ctr/bldbr-bot/tg/utils"
 )
 
 var logger = slog.Default().With("component", "tg-client")

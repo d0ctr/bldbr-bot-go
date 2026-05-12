@@ -6,7 +6,7 @@ import (
 
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 
-	"github.com/d0ctr/bldbr-bot-go/tg/utils"
+	"d0ctr/bldbr-bot/tg/utils"
 )
 
 type CommandDefinition struct {
