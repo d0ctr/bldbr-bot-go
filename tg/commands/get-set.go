@@ -68,7 +68,7 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 			return fmt.Errorf("error getting value from redis: %w", err)
 		}
 
-		var data _Data
+		var data _GetterData
 		err = json.Unmarshal([]byte(result["data"]), &data)
 		if err != nil {
 			sendErrorMsg(bot, ctx, "Ошибка при получении.", err)
@@ -108,12 +108,12 @@ func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
 	keys, err := redis.Keys(rtx, toKey(ctx, "*")).Result()
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при получении.", err)
-		return fmt.Errorf("error getting keys from redis: %w", err)
+		return utils.FmtNoSendError("error getting keys from redis: %w", err)
 	}
 
 	if len(keys) == 0 {
 		sendErrorMsg(bot, ctx, "В этом чате пока нет записей.")
-		return fmt.Errorf("no keys with query [%s] found in redis", toKey(ctx, "*"))
+		return utils.FmtNoSendError("no keys with query [%s] found in redis", toKey(ctx, "*"))
 	}
 
 	for i, key := range keys {
@@ -124,7 +124,7 @@ func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
 	_, err = ctx.Message.Reply(bot, text, utils.GetDefaultMessageOpts())
 	if err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при отправке.", err)
-		return fmt.Errorf("error sending the message: %w", err)
+		return utils.FmtNoSendError("error sending the message: %w", err)
 	}
 
 	return nil
@@ -156,7 +156,7 @@ func set(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	media := getMedia(message)
 
-	data := _Data{
+	data := _GetterData{
 		Text: text,
 	}
 
@@ -170,7 +170,7 @@ func set(bot *gotgbot.Bot, ctx *ext.Context) error {
 	hash := make(map[string]any)
 	if dataJson, err := json.Marshal(data); err != nil {
 		sendErrorMsg(bot, ctx, "Ошибка при сохранении", err)
-		return err
+		return utils.FmtNoSendError("%w", err)
 	} else {
 		hash["data"] = dataJson
 	}
@@ -214,7 +214,7 @@ func toKey(ctx *ext.Context, name string) string {
 	return fmt.Sprintf("%d:get:%s", ctx.Message.Chat.Id, name)
 }
 
-type _Data struct {
+type _GetterData struct {
 	Type        MediaType  `json:"type"`
 	Owner       any         `json:"owner"`
 
@@ -234,7 +234,7 @@ type _Data struct {
 	Media       string      `json:"media,omitempty"`
 }
 
-func (d *_Data) GetMedia() (string) {
+func (d *_GetterData) GetMedia() (string) {
 	if d.Type == MEDIA_TYPE_TEXT || d.Type == "" {
 		return ""
 	} else if d.Media != "" {

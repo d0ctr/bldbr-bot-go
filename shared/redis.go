@@ -33,4 +33,6 @@ func init() {
 	}
 
 	redisClient = redis.NewClient(opt)
+
+	redisClient.Ping(context.Background())
 }

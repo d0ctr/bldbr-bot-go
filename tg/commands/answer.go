@@ -1,14 +1,10 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"github.com/d0ctr/bldbr-bot-go/llm"
-	"github.com/d0ctr/bldbr-bot-go/llm/types"
-	"github.com/d0ctr/bldbr-bot-go/tg/utils"
 )
 
 var Answer = CommandDefinition{
