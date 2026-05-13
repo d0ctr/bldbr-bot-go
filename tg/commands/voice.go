@@ -79,7 +79,7 @@ func toSpeech(client *openai.Client, text string) (io.Reader, error) {
 		Input: text,
 		ResponseFormat: openai.AudioSpeechNewParamsResponseFormatOpus,
 		Voice: openai.AudioSpeechNewParamsVoiceUnion{
-			OfString: openai.String(string(openai.AudioSpeechNewParamsVoiceStringMarin)),
+			OfAudioSpeechNewsVoiceString2: openai.String(string(openai.AudioSpeechNewParamsVoiceString2Marin)),
 		},
 		Instructions: openai.String(prompt),
 	}

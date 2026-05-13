@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
@@ -159,26 +161,27 @@ func getTgTreeWithNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNod
 		node = tree.getTgNode(source.MessageId)
 	}
 
-	if message, ok := fromTgMessage(b, source); ok {
-		node = NewTreeNode(message)
-		tree.AddNode(node)
+	if node == nil {
+		if message, ok := fromTgMessage(b, source); ok {
+			node = NewTreeNode(message)
+			tree.AddNode(node)
+		}
 	}
 
 	return tree, node
 }
 
 func HandleTgChain(b *gotgbot.Bot, ctx *ext.Context) error {
-	return RespondToTgMessage(false, b, ctx)
+	return RespondToTgMessage(false, true, b, ctx)
 }
 
 func HandleTgCommand(b *gotgbot.Bot, ctx *ext.Context) error {
-	return RespondToTgMessage(true, b, ctx)
+	return RespondToTgMessage(true, true, b, ctx)
 }
 
-func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
+func RespondToTgMessage(command bool, stream bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	chatId := ctx.Message.Chat.Id
 	var tree *Tree
-	var prev *TreeNode
 	var node *TreeNode
 	var model types.Model
 
@@ -190,7 +193,6 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 		if !ok {
 			return fmt.Errorf("no model named [%s]", modelName)
 		}
-
 	}
 
 	if ctx.Message.ReplyToMessage != nil {
@@ -202,7 +204,8 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	}
 
 	if message, ok := fromTgMessage(b, ctx.Message); ok {
-		prev, node = node, NewTreeNode(message)
+		prev := node
+		node = NewTreeNode(message)
 		if tree == nil {
 			tree = NewTree(node)
 			addTgTree(chatId, tree)
@@ -227,27 +230,108 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	endAction := tg.WithAction(b, ctx, gotgbot.ChatActionTyping)
 	defer endAction()
 
+	var tgMessage *gotgbot.Message
+	var err error
+
+	if stream {
+		tgMessage, err = streamProgress(model, messages, b, ctx)
+	} else {
+		tgMessage, err = sendOneOff(model, messages, b, ctx)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if message, ok := fromTgMessage(b, tgMessage); ok {
+		prev := node
+		node = NewTreeNode(message)
+		tree.AppendNode(prev, node)
+	} else {
+		return fmt.Errorf("failed to save context node, no tex in the message")
+	}
+
+	return nil
+}
+
+func sendOneOff(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *gotgbot.Message, err error) {
 	r, err := SendRequest(model, messages)
 	if err != nil {
 		tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
-		return tg.FmtNoSendError("request resulted in an error: %w", err)
+		return nil, tg.FmtNoSendError("request resulted in an error: %w", err)
 	}
 
 	text, ok := r.Text()
 	if !ok {
 		tg.SendErrorMsg(b, ctx, "В ответе не было текста...")
-		return tg.FmtNoSendError("no text in the response: %v", r)
+		return nil, tg.FmtNoSendError("no text in the response: %v", r)
 	}
 
 	tgMessage, err := ctx.Message.ReplyMessage(b, text, tg.GetDefaultMessageOpts())
 	if err != nil {
-		return fmt.Errorf("error on send: %w", err)
+		return nil, fmt.Errorf("error on send: %w", err)
+	}
+	return tgMessage, nil
+}
+
+func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *gotgbot.Message, err error) {
+	chatId := ctx.EffectiveChat.Id
+	draftId := rand.Int64()
+
+	r, e := CreateStream(model, messages)
+	var text string
+
+	cooldown := time.NewTimer(0)
+loop:
+	for true {
+		timer := time.NewTimer(10 * time.Second)
+
+		select {
+		case err := <- e:
+			if err != nil {
+				tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
+				return nil, tg.FmtNoSendError("request resulted in an error: %w", err)
+			}
+		case msg, open := <- r:
+			if !open {
+				break loop
+			}
+
+			var ok bool
+			text, ok = msg.Text()
+
+			if !ok {
+				tg.SendErrorMsg(b, ctx, "В ответе не было текста...")
+				return nil, tg.FmtNoSendError("no text in the response: %v", r)
+			}
+		case <-timer.C:
+			slog.Debug("timed out waiting in llm/tg.go")
+			continue
+		}
+
+		select {
+		case <-cooldown.C:
+			cooldown.Reset(0)
+
+			ok, err := b.SendMessageDraft(chatId, draftId, text, &gotgbot.SendMessageDraftOpts{ParseMode: gotgbot.ParseModeHTML })
+
+			if err != nil && strings.Contains(err.Error(), "Too Many Requests") {
+				cooldown.Reset(16 * time.Second)
+			} else if err != nil {
+				slog.Warn("failed to send draft", slog.Any("chat", chatId), err)
+			} else if !ok {
+				slog.Warn("draft was not sent", slog.Any("chat", chatId))
+			}
+		default:
+			// cooling down
+		}
 	}
 
-	if message, ok := fromTgMessage(b, tgMessage); ok {
-		prev, node = node, NewTreeNode(message)
-		tree.AppendNode(prev, node)
+	slog.Debug("sending finilized text")
+	tgMessage, err := ctx.Message.ReplyMessage(b, text, tg.GetDefaultMessageOpts())
+	if err != nil {
+		return nil, fmt.Errorf("error on send: %w", err)
 	}
 
-	return nil
+	return tgMessage, nil
 }

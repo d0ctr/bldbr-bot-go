@@ -17,6 +17,7 @@ func mapRole(r types.MessageRole) responses.EasyInputMessageRole {
 	case types.MESSAGE_ROLE_SYSTEM:
 		return responses.EasyInputMessageRoleSystem
 	}
+
 	panic("unreachable")
 }
 
