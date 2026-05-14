@@ -16,7 +16,7 @@ import (
 var Events = CommandDefinition{
 	Name: "events",
 	Description: "список будущих событий на дискорд сервере",
-	Handler: events.events,
+	Response: events.events,
 }
 
 type _events struct {}

@@ -16,7 +16,7 @@ import (
 var Ahegao = CommandDefinition{
 	Name: "ahegao",
 	Description: "рандомное ахегао",
-	Handler: ahegao,
+	Response: ahegao,
 }
 
 func ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {

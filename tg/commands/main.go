@@ -11,7 +11,7 @@ import (
 
 type CommandDefinition struct {
 	Name, Description string
-	Handler handlers.Response
+	Response handlers.Response
 }
 
 var All = func() map[string]CommandDefinition {

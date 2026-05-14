@@ -14,7 +14,7 @@ import (
 var Model = CommandDefinition{
 	Name: "model",
 	Description: "{name?} изменить используемую модель",
-	Handler: model,
+	Response: model,
 }
 
 func model(b *gotgbot.Bot, ctx *ext.Context) error {

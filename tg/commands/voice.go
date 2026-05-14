@@ -17,7 +17,7 @@ import (
 var Voice = CommandDefinition{
 	Name: "voice",
 	Description: "Генерирует голосове сообщение из текста или аудио",
-	Handler: voice,
+	Response: voice,
 }
 
 func voice(bot *gotgbot.Bot, ctx *ext.Context) error {

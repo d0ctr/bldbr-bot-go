@@ -172,11 +172,11 @@ func getTgTreeWithNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNod
 	return tree, node
 }
 
-func HandleTgChain(b *gotgbot.Bot, ctx *ext.Context) error {
+func ReplyResponse(b *gotgbot.Bot, ctx *ext.Context) error {
 	return RespondToTgMessage(false, true, b, ctx)
 }
 
-func HandleTgCommand(b *gotgbot.Bot, ctx *ext.Context) error {
+func CommandResponse(b *gotgbot.Bot, ctx *ext.Context) error {
 	return RespondToTgMessage(true, true, b, ctx)
 }
 

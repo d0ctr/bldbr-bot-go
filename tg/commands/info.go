@@ -13,7 +13,7 @@ import (
 var Info = CommandDefinition{
 	Name: "info",
 	Description: "информация о чате",
-	Handler: info,
+	Response: info,
 }
 
 func info(bot *gotgbot.Bot, ctx *ext.Context) error {

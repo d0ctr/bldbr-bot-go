@@ -10,7 +10,7 @@ import (
 var Ping = CommandDefinition{
 	Name: "ping",
 	Description: "pong",
-	Handler: ping,
+	Response: ping,
 }
 
 func ping(bot *gotgbot.Bot, ctx *ext.Context) error {

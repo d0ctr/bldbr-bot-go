@@ -9,12 +9,10 @@ import (
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
-	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters"
 
-	"d0ctr/bldbr-bot/llm"
 	"d0ctr/bldbr-bot/shared"
 	"d0ctr/bldbr-bot/tg/commands"
+	"d0ctr/bldbr-bot/tg/handlers"
 	"d0ctr/bldbr-bot/tg/utils"
 )
 
@@ -72,21 +70,12 @@ func NewTgClient() (*TgClient, error) {
 	return tgClient, nil
 }
 
-func (tg *TgClient) isReplyToBot() filters.Message {
-	return func (msg *gotgbot.Message) bool {
-		return msg.ReplyToMessage != nil &&
-		msg.ReplyToMessage.From.Id == tg.bot.Id &&
-		msg.From.Id != tg.bot.Id &&
-		!strings.HasPrefix(msg.GetText(), "! ")
-	}
-}
-
 func (tg *TgClient) Start(wg *sync.WaitGroup) {
-	for name, def := range commands.All {
-		tg.dispatcher.AddHandler(handlers.NewCommand(name, def.Handler))
+	tg.dispatcher.AddHandler(handlers.AutoDelete())
+	tg.dispatcher.AddHandler(handlers.ReplyToBot())
+	for handler := range handlers.Commands() {
+		tg.dispatcher.AddHandler(handler)
 	}
-
-	tg.dispatcher.AddHandler(handlers.NewMessage(tg.isReplyToBot(), llm.HandleTgChain))
 
 	tg.bot.DeleteWebhook(&gotgbot.DeleteWebhookOpts{ DropPendingUpdates: false })
 
@@ -123,3 +112,4 @@ func (tg *TgClient) PublishCommands() {
 	}
 
 }
+

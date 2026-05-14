@@ -17,20 +17,20 @@ import (
 var Get = CommandDefinition{
 	Name: "get",
 	Description: "{название} вызвать запись из кэша",
-	Handler: get,
+	Response: get,
 }
 
 
 var Set = CommandDefinition{
 	Name: "set",
 	Description: "{название} добавить запись в кэш",
-	Handler: set,
+	Response: set,
 }
 
 var Lst = CommandDefinition{
 	Name: "lst",
 	Description: "список записей в кэше",
-	Handler: lst,
+	Response: lst,
 }
 
 func get(bot *gotgbot.Bot, ctx *ext.Context) error {
