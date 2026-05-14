@@ -2,8 +2,10 @@ package openai
 
 import (
 	"fmt"
+	"strings"
 
 	"d0ctr/bldbr-bot/llm/types"
+
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
 )
@@ -43,54 +45,53 @@ func mapContentItem(c types.MessageContent) responses.ResponseInputContentUnionP
 	}
 }
 
-func mapContentList(contents []types.MessageContent) responses.EasyInputMessageContentUnionParam {
-	var list responses.ResponseInputMessageContentListParam
+func mapContentList(contents []types.MessageContent, textOnly bool) (content responses.EasyInputMessageContentUnionParam) {
+	if textOnly {
+		var textBuilder = strings.Builder{}
 
-	for _, c := range contents {
-		list = append(list, mapContentItem(c))
+		for _, c := range contents {
+			c.OfText(func(text string) {
+				fmt.Fprintf(&textBuilder, "%v\n", text)
+			})
+		}
+
+		content.OfString = openai.String(textBuilder.String())
+
+	} else {
+		var list responses.ResponseInputMessageContentListParam
+
+		for _, c := range contents {
+			list = append(list, mapContentItem(c))
+		}
+		content.OfInputItemContentList = list
+
 	}
 
-	return responses.EasyInputMessageContentUnionParam{ OfInputItemContentList: list }
+	return content
 }
 
 func mapMessages(messages []types.Message) responses.ResponseNewParamsInputUnion {
 	var items []responses.ResponseInputItemUnionParam
 
 	for i, message := range messages {
-		inputMessage := &responses.EasyInputMessageParam{
-			Role: mapRole(message.Role()),
-			Content: mapContentList(message.Content()),
-		}
+		var textOnly bool
 
-		if i == 0 {
-			fixFirstMessage(inputMessage)
+		if i == 0 || message.Role() == types.MESSAGE_ROLE_ASSISTANT {
+			textOnly = true
+		} else {
+			textOnly = false
 		}
 
 		item := responses.ResponseInputItemUnionParam{
-			OfMessage: inputMessage,
+			OfMessage: &responses.EasyInputMessageParam{
+				Role: mapRole(message.Role()),
+				Content: mapContentList(message.Content(), textOnly),
+			},
 		}
 
 		items = append(items, item)
 	}
 	return responses.ResponseNewParamsInputUnion{
 		OfInputItemList: items,
-	}
-}
-
-func fixFirstMessage(inputMessage *responses.EasyInputMessageParam) {
-	if inputMessage.Role == responses.EasyInputMessageRoleUser {
-		return
-	}
-
-	if len(inputMessage.Content.OfInputItemContentList) == 0 {
-		return
-	}
-
-	for _, content := range inputMessage.Content.OfInputItemContentList {
-		// non-text content may be emitted only by a user
-		if content.OfInputText == nil {
-			inputMessage.Role = responses.EasyInputMessageRoleUser
-			break
-		}
 	}
 }

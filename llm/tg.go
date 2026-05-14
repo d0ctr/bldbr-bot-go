@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -233,7 +234,7 @@ func RespondToTgMessage(command bool, stream bool, b *gotgbot.Bot, ctx *ext.Cont
 	var tgMessage *gotgbot.Message
 	var err error
 
-	if stream {
+	if stream && ctx.EffectiveChat.Type == "private" {
 		tgMessage, err = streamProgress(model, messages, b, ctx)
 	} else {
 		tgMessage, err = sendOneOff(model, messages, b, ctx)
@@ -282,9 +283,13 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 	var text string
 
 	cooldown := time.NewTimer(0)
-loop:
+	defer cooldown.Stop()
+
+	smoothener := time.NewTicker(200 * time.Millisecond)
+	defer smoothener.Stop()
 	for true {
 		timer := time.NewTimer(10 * time.Second)
+		defer timer.Stop()
 
 		select {
 		case err := <- e:
@@ -294,7 +299,7 @@ loop:
 			}
 		case msg, open := <- r:
 			if !open {
-				break loop
+				goto finish
 			}
 
 			var ok bool
@@ -305,33 +310,62 @@ loop:
 				return nil, tg.FmtNoSendError("no text in the response: %v", r)
 			}
 		case <-timer.C:
-			slog.Debug("timed out waiting in llm/tg.go")
+			slog.Debug("timed out waiting next message")
 			continue
 		}
 
 		select {
-		case <-cooldown.C:
+		case <- cooldown.C:
 			cooldown.Reset(0)
-
-			ok, err := b.SendMessageDraft(chatId, draftId, text, &gotgbot.SendMessageDraftOpts{ParseMode: gotgbot.ParseModeHTML })
-
-			if err != nil && strings.Contains(err.Error(), "Too Many Requests") {
-				cooldown.Reset(16 * time.Second)
-			} else if err != nil {
-				slog.Warn("failed to send draft", slog.Any("chat", chatId), err)
-			} else if !ok {
-				slog.Warn("draft was not sent", slog.Any("chat", chatId))
-			}
 		default:
-			// cooling down
+			continue
+		}
+
+		select {
+		case <-smoothener.C:
+			// noop
+		default:
+			continue
+		}
+
+		ok, err := b.SendMessageDraft(chatId, draftId, text, &gotgbot.SendMessageDraftOpts{ParseMode: gotgbot.ParseModeHTML })
+
+		if err != nil && strings.Contains(err.Error(), "Too Many Requests") {
+			cooldownDuration := time.Duration(parseCooldown(err)) * time.Second
+			slog.Debug("going to fast, cooling down for {}s", cooldownDuration)
+
+			cooldown.Reset(cooldownDuration * time.Second)
+		} else if err != nil {
+			slog.Warn("failed to send draft", slog.Any("chat", chatId), err)
+		} else if !ok {
+			slog.Warn("draft was not sent", slog.Any("chat", chatId))
 		}
 	}
 
-	slog.Debug("sending finilized text")
+finish:
 	tgMessage, err := ctx.Message.ReplyMessage(b, text, tg.GetDefaultMessageOpts())
 	if err != nil {
 		return nil, fmt.Errorf("error on send: %w", err)
 	}
 
 	return tgMessage, nil
+}
+
+var cooldownRegex = regexp.MustCompile(`retry after (?<time>\d+)$`)
+
+func parseCooldown(err error) int {
+	text := err.Error()
+
+	matches := cooldownRegex.FindStringSubmatch(text)
+	if len(matches) > 1 {
+		timeoutStr := matches[1]
+
+		if v, err := strconv.Atoi(timeoutStr); err != nil {
+			slog.Error("failed to parse cooldown from string {}", text)
+		} else {
+			return v
+		}
+	}
+
+	return 0
 }
