@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"

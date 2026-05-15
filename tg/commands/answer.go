@@ -14,6 +14,6 @@ var Answer = CommandDefinition{
 }
 
 func answer(b *gotgbot.Bot, ctx *ext.Context) error {
-	return llm.HandleTgCommand(b, ctx)
+	return llm.CommandResponse(b, ctx)
 }
 
