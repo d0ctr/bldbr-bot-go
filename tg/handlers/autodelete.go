@@ -14,7 +14,7 @@ func AutoDelete() ext.Handler {
 			return msg.PinnedMessage != nil
 		},
 		func(b *gotgbot.Bot, ctx *ext.Context) error {
-			_, err := ctx.Message.PinnedMessage.Delete(b, nil)
+			_, err := ctx.Message.Delete(b, nil)
 			if err != nil {
 				return utils.FmtNoSendError("%w", err)
 			} else {
