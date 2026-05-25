@@ -1,9 +1,12 @@
 package commands
 
 import (
+	"fmt"
 	"maps"
 	"strings"
+	"unicode"
 
+	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 
 	"d0ctr/bldbr-bot/tg/utils"
@@ -15,15 +18,15 @@ type CommandDefinition struct {
 }
 
 var All = func() map[string]CommandDefinition {
-	all_a := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst, Voice, Answer, Model, Events, Info}
+	allA := []CommandDefinition{Ping, Ahegao, Urban, Get, Set, Lst, Voice, Answer, Model, Events, Info, Imagine}
 
-	all_m := make(map[string]CommandDefinition, len(all_a))
+	allM := make(map[string]CommandDefinition, len(allA))
 	
-	for _, def := range all_a {
-		all_m[def.Name] = def
+	for _, def := range allA {
+		allM[def.Name] = def
 	}
 
-	return all_m
+	return allM
 }()
 
 var sendErrorMsg = utils.SendErrorMsg
@@ -61,4 +64,37 @@ func parseArgs(text string, limit uint) map[uint]string {
 	}
 
 	return words
+}
+
+func trimCommand(s string) string {
+	if !strings.HasPrefix(s, "/") {
+		return s
+	}
+
+	space := strings.IndexFunc(s, unicode.IsSpace)
+
+	if space == -1 {
+		return ""
+	}
+
+	return s[space-1:]
+}
+
+func joinText(messages ...*gotgbot.Message) string {
+	builder := strings.Builder{}
+
+	for _, msg := range messages {
+		if msg == nil {
+			continue
+		}
+
+		text := msg.GetText()
+		text = trimCommand(text)
+
+		if text != "" {
+			fmt.Fprintf(&builder, "%v\n", text)
+		}
+	}
+
+	return builder.String()
 }

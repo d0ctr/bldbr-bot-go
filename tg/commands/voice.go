@@ -16,7 +16,7 @@ import (
 
 var Voice = CommandDefinition{
 	Name: "voice",
-	Description: "Генерирует голосове сообщение из текста или аудио",
+	Description: "{текст?} сгенерировать голосовое сообщение из текста или аудио",
 	Response: voice,
 }
 

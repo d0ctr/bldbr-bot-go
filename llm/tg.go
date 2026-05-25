@@ -173,14 +173,14 @@ func getTgTreeWithNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNod
 }
 
 func ReplyResponse(b *gotgbot.Bot, ctx *ext.Context) error {
-	return RespondToTgMessage(false, true, b, ctx)
+	return RespondToTgMessage(false, b, ctx)
 }
 
 func CommandResponse(b *gotgbot.Bot, ctx *ext.Context) error {
-	return RespondToTgMessage(true, true, b, ctx)
+	return RespondToTgMessage(true, b, ctx)
 }
 
-func RespondToTgMessage(command bool, stream bool, b *gotgbot.Bot, ctx *ext.Context) error{
+func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	chatId := ctx.Message.Chat.Id
 	var tree *Tree
 	var node *TreeNode
@@ -234,7 +234,7 @@ func RespondToTgMessage(command bool, stream bool, b *gotgbot.Bot, ctx *ext.Cont
 	var tgMessage *gotgbot.Message
 	var err error
 
-	if stream && ctx.EffectiveChat.Type == "private" {
+	if ctx.EffectiveChat.Type == "private" {
 		tgMessage, err = streamProgress(model, messages, b, ctx)
 	} else {
 		tgMessage, err = sendOneOff(model, messages, b, ctx)
