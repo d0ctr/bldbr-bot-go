@@ -328,7 +328,10 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 			continue
 		}
 
-		ok, err := b.SendMessageDraft(chatId, draftId, text, &gotgbot.SendMessageDraftOpts{ParseMode: gotgbot.ParseModeHTML })
+		ok, err := b.SendMessageDraft(chatId, draftId, &gotgbot.SendMessageDraftOpts{
+			Text: text,
+			ParseMode: gotgbot.ParseModeHTML,
+		})
 
 		if err != nil && strings.Contains(err.Error(), "Too Many Requests") {
 			cooldownDuration := time.Duration(parseCooldown(err)) * time.Second
