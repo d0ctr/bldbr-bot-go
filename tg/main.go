@@ -78,8 +78,6 @@ func (tg TgClient) Start(wg *sync.WaitGroup) {
 		tg.dispatcher.AddHandler(handler)
 	}
 
-	tg.bot.DeleteWebhook(&gotgbot.DeleteWebhookOpts{ DropPendingUpdates: false })
-
 	if err := tg.startWebhook(); err != nil {
 		logger.Error("failed to start webhook", err)
 
@@ -95,7 +93,7 @@ func (tg TgClient) Start(wg *sync.WaitGroup) {
 }
 
 func (tg TgClient) startPolling() {
-	err := tg.updater.StartPolling(tg.bot, nil)
+	err := tg.updater.StartPolling(tg.bot, &ext.PollingOpts{ EnableWebhookDeletion: true })
 	if err != nil {
 		log.Panicf("failed to start polling: %v", err)
 	}
@@ -103,24 +101,23 @@ func (tg TgClient) startPolling() {
 }
 
 func (tg TgClient) startWebhook() error {
-	url, ok := shared.DOMAIN_URL.Get()
+	domain, ok := shared.DOMAIN_URL.Get()
 	if !ok {
 		return fmt.Errorf("'%v' is not set", shared.DOMAIN_URL)
 	}
-	
-	webhook_secret := uuid.NewString()
-	if _, err := tg.bot.SetWebhook(url, &gotgbot.SetWebhookOpts{ SecretToken: webhook_secret }); err != nil {
-		return fmt.Errorf("failed to set webhook url: %w", err)
+
+	secretToken := uuid.NewString()
+	urlPath := "webhook/" + uuid.NewString()
+
+	if err := tg.updater.StartWebhook(tg.bot, urlPath, ext.WebhookOpts{ ListenAddr: ":8080", SecretToken: secretToken }); err != nil {
+		return fmt.Errorf("failed to start webhook: %v", err)
 	}
 
-	err := tg.updater.StartWebhook(tg.bot, url, ext.WebhookOpts{
-		ListenAddr: "localhost:8080",
-		SecretToken: webhook_secret,
-	})
-
-	if err != nil {
-		log.Panicf("failed to start webhook: %v", err)
+	url := domain + "/" + urlPath
+	if ok, err := tg.bot.SetWebhook(url, &gotgbot.SetWebhookOpts{ SecretToken: secretToken }); !ok {
+		return fmt.Errorf("failed to set webhook: %w", err)
 	}
+
 	logger.Info("telegram bot has started webhook")
 
 	return nil
@@ -146,6 +143,5 @@ func (tg *TgClient) PublishCommands() {
 	} else {
 		logger.Debug("have set commands")
 	}
-
 }
 
