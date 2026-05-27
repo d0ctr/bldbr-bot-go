@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"log/slog"
-	"os"
 
 	"github.com/dotenv-org/godotenvvault"
 )
@@ -50,25 +49,5 @@ func init() {
 		slog.Error("failed to acquire env variables", err)
 		// panic();
 	}
-}
-
-type EnvKey string
-const (
-	REDIS_URL       EnvKey = "REDIS_URL"
-	TELEGRAM_TOKEN  EnvKey = "TELEGRAM_TOKEN"
-	ENV             EnvKey = "ENV"
-	OPENAI_TOKEN    EnvKey = "OPENAI_TOKEN"
-	XAI_TOKEN       EnvKey = "XAI_TOKEN"
-	DISCORD_TOKEN   EnvKey = "DISCORD_TOKEN"
-	DISCORD_APP_ID  EnvKey = "DISCORD_APP_ID"
-)
-
-func (key EnvKey) Get() (string, bool) {
-	v := os.Getenv(string(key))
-	if (v == "") {
-		return v, false
-	}
-
-	return v, true
 }
 

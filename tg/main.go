@@ -2,12 +2,14 @@ package tg
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"sync"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
+	"github.com/google/uuid"
 
 	"d0ctr/bldbr-bot/shared"
 	"d0ctr/bldbr-bot/tg/commands"
@@ -69,7 +71,7 @@ func NewTgClient() (*TgClient, error) {
 	return tgClient, nil
 }
 
-func (tg *TgClient) Start(wg *sync.WaitGroup) {
+func (tg TgClient) Start(wg *sync.WaitGroup) {
 	tg.dispatcher.AddHandler(handlers.AutoDelete())
 	tg.dispatcher.AddHandler(handlers.ReplyToBot())
 	for handler := range handlers.Commands() {
@@ -78,8 +80,11 @@ func (tg *TgClient) Start(wg *sync.WaitGroup) {
 
 	tg.bot.DeleteWebhook(&gotgbot.DeleteWebhookOpts{ DropPendingUpdates: false })
 
-	tg.updater.StartPolling(tg.bot, nil)
-	logger.Info("telegram bot has started")
+	if err := tg.startWebhook(); err != nil {
+		logger.Error("failed to start webhook: {}", err)
+
+		tg.startPolling()
+	}
 
 	tg.PublishCommands()
 
@@ -87,6 +92,38 @@ func (tg *TgClient) Start(wg *sync.WaitGroup) {
 		tg.updater.Idle()
 		logger.Info("telegram bot has finished")
 	})
+}
+
+func (tg TgClient) startPolling() {
+	err := tg.updater.StartPolling(tg.bot, nil)
+	if err != nil {
+		log.Panicf("failed to start polling: %v", err)
+	}
+	logger.Info("telegram bot has started polling")
+}
+
+func (tg TgClient) startWebhook() error {
+	url, ok := shared.DOMAIN_URL.Get()
+	if !ok {
+		return fmt.Errorf("'%v' is not set", shared.DOMAIN_URL)
+	}
+	
+	webhook_secret := uuid.NewString()
+	if _, err := tg.bot.SetWebhook(url, &gotgbot.SetWebhookOpts{ SecretToken: webhook_secret }); err != nil {
+		return fmt.Errorf("failed to set webhook url: %w", err)
+	}
+
+	err := tg.updater.StartWebhook(tg.bot, url, ext.WebhookOpts{
+		ListenAddr: "localhost:8080",
+		SecretToken: webhook_secret,
+	})
+
+	if err != nil {
+		log.Panicf("failed to start webhook: %v", err)
+	}
+	logger.Info("telegram bot has started webhook")
+
+	return nil
 }
 
 func (tg *TgClient) Stop() error {
