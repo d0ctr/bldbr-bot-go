@@ -81,7 +81,7 @@ func (tg TgClient) Start(wg *sync.WaitGroup) {
 	tg.bot.DeleteWebhook(&gotgbot.DeleteWebhookOpts{ DropPendingUpdates: false })
 
 	if err := tg.startWebhook(); err != nil {
-		logger.Error("failed to start webhook: {}", err)
+		logger.Error("failed to start webhook", err)
 
 		tg.startPolling()
 	}
