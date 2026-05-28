@@ -92,7 +92,7 @@ func (_events) events(b *gotgbot.Bot, ctx *ext.Context) (err error) {
 					responseBuilder,
 					"<code>  </code>Начало: <tg-time unix=\"%d\" format=\"Dt\">%s (UTC)</tg-time>\n",
 					event.Start.Unix(),
-					event.Start.Format(""),
+					event.Start.Format("January 2, 2006 at 15:04"),
 				)
 
 				if event.End != nil {

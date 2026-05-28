@@ -49,6 +49,7 @@ type Event struct {
 	Location string
 	Start time.Time
 	End *time.Time
+	ImageUrl string
 }
 
 func GetEvents(guildId string) (result []Event, err error) {
@@ -102,6 +103,10 @@ func GetEvents(guildId string) (result []Event, err error) {
 			},
 
 			Channel: channel,
+		}
+
+		if e.Image != "" {
+			event.ImageUrl = fmt.Sprintf("https://cdn.discordapp.com/guild-events/%s/%s.png?size=512", e.ID, e.Image)
 		}
 
 		result = append(result, event)
