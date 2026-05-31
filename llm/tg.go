@@ -145,31 +145,35 @@ func (t *Tree) getTgNode(messageId int64) *TreeNode {
 	}
 }
 
-func getTgTreeWithNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
+func getOrCreateTgNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
 	chatId := source.Chat.Id
-	tree := getTgTree(chatId)
-	var node *TreeNode
+	tree, node := getTgNode(source)
 
-	if tree == nil {
-		if message, ok := fromTgMessage(b, source); ok {
-			node = NewTreeNode(message)
-			tree = NewTree(node)
-
-			addTgTree(chatId, tree)
-			return tree, node
-		}
-	} else {
-		node = tree.getTgNode(source.MessageId)
-	}
-
+	// if node does not exist yet -> create it
 	if node == nil {
 		if message, ok := fromTgMessage(b, source); ok {
 			node = NewTreeNode(message)
-			tree.AddNode(node)
+			if tree == nil {
+				tree = NewTree(node)
+				addTgTree(chatId, tree)
+			} else {
+				tree.AddNode(node)
+			}
 		}
 	}
 
 	return tree, node
+}
+
+func getTgNode(source *gotgbot.Message) (*Tree, *TreeNode) {
+	chatId := source.Chat.Id
+	tree := getTgTree(chatId)
+
+	if tree != nil {
+		return tree, tree.getTgNode(source.MessageId)
+	}
+
+	return nil, nil
 }
 
 func ReplyResponse(b *gotgbot.Bot, ctx *ext.Context) error {
@@ -196,8 +200,19 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 		}
 	}
 
+
 	if ctx.Message.ReplyToMessage != nil {
-		tree, node = getTgTreeWithNode(b, ctx.Message.ReplyToMessage)
+		if command {
+			// if it is a command -> create a new node from the replied message
+			tree, node = getOrCreateTgNode(b, ctx.Message.ReplyToMessage)
+		} else {
+			// if not -> then continue only if replied message is part of a tree
+			tree, node = getTgNode(ctx.Message.ReplyToMessage)
+
+			if node == nil {
+				return nil
+			}
+		}
 	}
 
 	if tree == nil {
