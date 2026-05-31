@@ -9,17 +9,21 @@ import (
 )
 
 func AutoDelete() ext.Handler {
-	return handlers.NewMessage(
+	handler := handlers.NewMessage(
 		func(msg *gotgbot.Message) bool {
 			return msg.PinnedMessage != nil
 		},
 		func(b *gotgbot.Bot, ctx *ext.Context) error {
-			_, err := ctx.Message.Delete(b, nil)
-			if err != nil {
+			if ok, err := ctx.Message.Delete(b, nil); err != nil {
 				return utils.FmtNoSendError("%w", err)
+			} else if !ok {
+				return utils.FmtNoSendError("failed to delete a service message")
 			} else {
 				return nil
 			}
 		},
 	)
+
+	handler.AllowBot = true
+	return handlers.NewNamedhandler("message_autodelete", handler)
 }
