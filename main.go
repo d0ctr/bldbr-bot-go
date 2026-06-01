@@ -7,6 +7,7 @@ import (
 	"sync"
 	"syscall"
 
+	"d0ctr/bldbr-bot/shared"
 	_ "d0ctr/bldbr-bot/shared"
 	"d0ctr/bldbr-bot/tg"
 )
@@ -15,7 +16,7 @@ func main() {
 	tgClient, err := tg.NewTgClient()
 
 	if err != nil {
-		slog.Error("failed to start tg bot", err)
+		slog.Error("failed to start tg bot", shared.ErrAttr(err))
 		return
 	}
 
@@ -27,11 +28,11 @@ func main() {
 	
 	go func() {
 		signal := <-stop
-		slog.Info("received signal: {}, stopping", signal)
+		slog.Info("received signal: {}, stopping", shared.TemplateAttr(signal))
 
 		err := tgClient.Stop()
 		if err != nil {
-			slog.Error("telegram bot has failed to stop", err)
+			slog.Error("telegram bot has failed to stop", shared.ErrAttr(err))
 		}
 
 		if err != nil {

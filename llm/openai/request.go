@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"d0ctr/bldbr-bot/llm/types"
-	"d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/services"
+
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
 )
@@ -74,8 +75,8 @@ func SendRequest(model types.Model, request responses.ResponseNewParams) (Respon
 	var client *openai.Client
 
 	switch model.Provider() {
-		case types.MODEL_PROVIDER_XAI: client = shared.XAi();
-		case types.MODEL_PROVIDER_OPENAI: client = shared.OpenAi()
+		case types.MODEL_PROVIDER_XAI: client = services.XAi();
+		case types.MODEL_PROVIDER_OPENAI: client = services.OpenAi()
 	}
 
 	if client == nil {

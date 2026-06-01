@@ -1,6 +1,7 @@
-package shared
+package services
 
 import (
+	"d0ctr/bldbr-bot/shared"
 	"log/slog"
 
 	"github.com/openai/openai-go/v3"
@@ -14,7 +15,7 @@ func XAi() *openai.Client {
 var xAiClient *openai.Client 
 
 func init() {
-	token, ok := XAI_TOKEN.Get()
+	token, ok := shared.XAI_TOKEN.Get()
 	if !ok {
 		slog.Error("'XAI_TOKEN' is not found")
 		return

@@ -17,7 +17,7 @@ import (
 	"d0ctr/bldbr-bot/tg/utils"
 )
 
-var logger = slog.Default().With("component", "tg-client")
+var logger = slog.Default().With(shared.ComponentAttr("tg-client"))
 
 type TgClient struct {
 	bot *gotgbot.Bot
@@ -56,7 +56,7 @@ func NewTgClient() (*TgClient, error) {
 				}
 			}
 
-			slog.Error("got an error", err)
+			slog.Error("got an error", shared.ErrAttr(err))
 
 			return ext.DispatcherActionNoop
 		},
@@ -79,7 +79,7 @@ func (tg TgClient) Start(wg *sync.WaitGroup) {
 	}
 
 	if err := tg.startWebhook(); err != nil {
-		logger.Error("failed to start webhook", err)
+		logger.Error("failed to start webhook", shared.ErrAttr(err))
 
 		tg.startPolling()
 	}
@@ -139,7 +139,7 @@ func (tg *TgClient) PublishCommands() {
 	}
 
 	if ok, err := tg.bot.SetMyCommands(botCommands, nil); !ok {
-		logger.Warn("failed to set commands", err)
+		logger.Warn("failed to set commands", shared.ErrAttr(err))
 	} else {
 		logger.Debug("have set commands")
 	}

@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"d0ctr/bldbr-bot/services"
+
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"d0ctr/bldbr-bot/shared"
 	gredis "github.com/redis/go-redis/v9"
 )
 
 var redis *gredis.Client
 
 func init() {
-	redis, _ = shared.Redis()
+	redis, _ = services.Redis()
 }
 
 

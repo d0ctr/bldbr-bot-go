@@ -36,14 +36,14 @@ func readJsonLine(r *bufio.Reader, t *testing.T) map[string]any {
 func TestMultipleComponents(t *testing.T) {
 	l, r := mockLogger()
 
-	l = l.With(COMPONENT, "1")
+	l = l.With(_COMPONENT, "1")
 
 	// to avoid blocking, logging should be perfomed in a routine
-	go l.Info(t.Name(), COMPONENT, "2")
+	go l.Info(t.Name(), _COMPONENT, "2")
 
 	line:= readJsonLine(r, t)
 
-	component := line[COMPONENT]
+	component := line[_COMPONENT]
 	if component != "1:2" {
 		t.Errorf("expected [%s], actual [%s]", "1:2", component)
 	}
@@ -56,7 +56,7 @@ func TestNoComponents(t *testing.T) {
 	go l.Info(t.Name())
 
 	line := readJsonLine(r, t)
-	if component, ok := line[COMPONENT]; ok {
+	if component, ok := line[_COMPONENT]; ok {
 		t.Errorf("expected no components, actual [%s]", component)
 	}
 }
@@ -65,7 +65,7 @@ func TestTemplateArgs_asSlice(t *testing.T) {
 	expected := "hello, 1!"
 	l, r := mockLogger()
 
-	go l.Info("{}, {}!", []any{"hello", 1})
+	go l.Info("{}, {}!", TemplateAttr("hello"), TemplateAttr(1))
 
 	line := readJsonLine(r, t)
 
@@ -79,7 +79,7 @@ func TestTemplateArgs_asSingleInt(t *testing.T) {
 	expected := "hello, 1!"
 	l, r := mockLogger()
 
-	go l.Info("hello, {}!", 1)
+	go l.Info("hello, {}!", TemplateAttr(r))
 
 	line := readJsonLine(r, t)
 
@@ -92,7 +92,7 @@ func TestTemplateArgs_asSingleInt(t *testing.T) {
 func TestTemplateArgs_asSingleErr(t *testing.T) {
 	l, r := mockLogger()
 
-	go l.Info(t.Name(), fmt.Errorf("test"))
+	go l.Info(t.Name(), ErrAttr(fmt.Errorf("test")))
 
 	line := readJsonLine(r, t)
 
@@ -109,7 +109,7 @@ func TestTemplateArgs_asSliceWithError(t *testing.T) {
 	expected := "hello, 1!"
 	l, r := mockLogger()
 
-	go l.Info("hello, {}!", []any{1, fmt.Errorf("test")})
+	go l.Info("hello, {}!", TemplateAttr(1), ErrAttr(fmt.Errorf("test")))
 
 	line := readJsonLine(r, t)
 

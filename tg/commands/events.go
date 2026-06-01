@@ -9,6 +9,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"d0ctr/bldbr-bot/discord"
+	"d0ctr/bldbr-bot/services"
 	"d0ctr/bldbr-bot/shared"
 	"d0ctr/bldbr-bot/tg/utils"
 )
@@ -29,7 +30,7 @@ func (_events) events(b *gotgbot.Bot, ctx *ext.Context) (err error) {
 		return nil
 	}
 
-	redis, rtx := shared.Redis()
+	redis, rtx := services.Redis()
 
 	key := events.toKey(ctx)
 
@@ -61,7 +62,7 @@ func (_events) events(b *gotgbot.Bot, ctx *ext.Context) (err error) {
 			 sendErrorMsg(b, ctx, "Ошибка при запросе", err)
 			 return nil
 		} else if err != nil {
-			slog.Error("silently logging request error", err)
+			slog.Error("silently logging request error", shared.ErrAttr(err))
 		}
 	}
 
@@ -82,7 +83,7 @@ func (_events) events(b *gotgbot.Bot, ctx *ext.Context) (err error) {
 				if msg, err := replyingTo.Reply(b, responseBuilder.String(), utils.GetDefaultMessageOpts()); err != nil {
 					replyingTo = msg
 				} else {
-					slog.Error("failed to send response", err)
+					slog.Error("failed to send response", shared.ErrAttr(err))
 				}
 
 				responseBuilder.Reset()
@@ -115,7 +116,7 @@ func (_events) events(b *gotgbot.Bot, ctx *ext.Context) (err error) {
 
 		if text := responseBuilder.String(); text != "" {
 			if msg, err := replyingTo.Reply(b, responseBuilder.String(), utils.GetDefaultMessageOpts()); err != nil {
-				slog.Error("failed to send response", err)
+				slog.Error("failed to send response", shared.ErrAttr(err))
 			} else {
 				replyingTo = msg
 			}

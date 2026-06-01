@@ -10,7 +10,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
-	"d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/services"
 	"d0ctr/bldbr-bot/tg/utils"
 )
 
@@ -45,7 +45,7 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return err
 	}
 
-	redis, rtx := shared.Redis()
+	redis, rtx := services.Redis()
 
 	key := toKey(ctx, name)
 	keyType, err := redis.Type(rtx, key).Result()
@@ -103,7 +103,7 @@ func get(bot *gotgbot.Bot, ctx *ext.Context) error {
 }
 
 func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
-	redis, rtx := shared.Redis()
+	redis, rtx := services.Redis()
 
 	keys, err := redis.Keys(rtx, toKey(ctx, "*")).Result()
 	if err != nil {
@@ -131,7 +131,7 @@ func lst(bot *gotgbot.Bot, ctx *ext.Context) error {
 }
 
 func set(bot *gotgbot.Bot, ctx *ext.Context) error {
-	redis, rtx := shared.Redis()
+	redis, rtx := services.Redis()
 
 	message := ctx.Message.ReplyToMessage
 	if message == nil {

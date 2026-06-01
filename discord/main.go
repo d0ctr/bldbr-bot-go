@@ -13,16 +13,18 @@ import (
 var logger *slog.Logger
 var session *discordgo.Session
 
-var NO_SESSION = fmt.Errorf("no discord session")
+type Error error
+
+var NoSessionError Error = fmt.Errorf("no session")
 
 func init() {
-	logger = slog.With("component", "discord")
+	logger = slog.With(shared.ComponentAttr("discord"))
 	var err error
 
 	if token, ok := shared.DISCORD_TOKEN.Get(); !ok {
-		logger.Error("'DISCORD_TOKEN' not found")
+		logger.Warn("'DISCORD_TOKEN' not found")
 	} else if session, err = discordgo.New(fmt.Sprintf("Bot %s", token)); err != nil {
-		logger.Error("failed to create bot", err)
+		logger.Error("failed to create bot", shared.ErrAttr(err))
 	}
 }
 
@@ -54,7 +56,7 @@ type Event struct {
 
 func GetEvents(guildId string) (result []Event, err error) {
 	if session == nil {
-		return result, NO_SESSION
+		return result, NoSessionError
 	}
 
 	guild, err := session.Guild(guildId)

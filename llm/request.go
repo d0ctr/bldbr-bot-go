@@ -6,6 +6,7 @@ import (
 	"d0ctr/bldbr-bot/llm/htmlizer"
 	"d0ctr/bldbr-bot/llm/openai"
 	"d0ctr/bldbr-bot/llm/types"
+	"d0ctr/bldbr-bot/shared"
 )
 
 const prompt = `# DESCRIPTION
@@ -26,7 +27,7 @@ func SendRequest(model types.Model, messages []types.Message) (types.Message, er
 	} else {
 		text, err = htmlizer.Htmlize(text)
 		if err != nil {
-			slog.Error("error sanitizing html", err)
+			slog.Error("error sanitizing html", shared.ErrAttr(err))
 		}
 
 		msg := types.FromText("", "", types.MESSAGE_ROLE_ASSISTANT, text)

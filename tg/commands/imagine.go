@@ -2,7 +2,7 @@ package commands
 
 import (
 	"context"
-	"d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/services"
 	"d0ctr/bldbr-bot/tg/utils"
 	"encoding/base64"
 	"fmt"
@@ -29,7 +29,7 @@ func imagine(b *gotgbot.Bot, ctx *ext.Context) error {
 		return utils.FmtNoSendError("command is missing a query")
 	}
 
-	client := shared.OpenAi()
+	client := services.OpenAi()
 
 	action := utils.WithAction(b, ctx, gotgbot.ChatActionUploadPhoto)
 	defer action()

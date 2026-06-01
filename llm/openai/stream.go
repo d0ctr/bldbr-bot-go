@@ -3,7 +3,7 @@ package openai
 import (
 	"context"
 	"d0ctr/bldbr-bot/llm/types"
-	"d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/services"
 	"fmt"
 
 	"github.com/openai/openai-go/v3"
@@ -73,8 +73,8 @@ func CreateStream(model types.Model, request responses.ResponseNewParams) (Strea
 	var client *openai.Client
 
 	switch model.Provider() {
-		case types.MODEL_PROVIDER_OPENAI: client = shared.OpenAi()
-		case types.MODEL_PROVIDER_XAI: client = shared.XAi();
+		case types.MODEL_PROVIDER_OPENAI: client = services.OpenAi()
+		case types.MODEL_PROVIDER_XAI: client = services.XAi();
 	}
 
 	if client == nil {

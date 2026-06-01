@@ -20,7 +20,7 @@ var Ahegao = CommandDefinition{
 }
 
 func ahegao(bot *gotgbot.Bot, ctx *ext.Context) error {
-	logger := slog.Default().With("component", "ahegao")
+	logger := slog.Default().With(shared.ComponentAttr("ahegao"))
 
 	url, ok := shared.AHEGAO_API.Get()
 	if !ok {

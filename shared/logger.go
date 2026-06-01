@@ -1,8 +1,9 @@
 package shared
 
 import (
-	"fmt"
 	"context"
+	"fmt"
+	"iter"
 	"log/slog"
 	"os"
 	"slices"
@@ -11,18 +12,31 @@ import (
 
 const (
 	_COMPONENTS_DELIM = ":"
-	_BAD_KEY = "!BADKEY"
-	COMPONENT = "component"
+	_BAD_KEY          = "!BADKEY"
+	_COMPONENT        = "component"
+	_TEMPLATE         = "!TEMPLATE"
+	_ERROR            = "error"
 )
 
-var _ = func () any {
+func init() {
 	slog.SetDefault(NewLogger())
-	return nil
-}()
+}
 
 type _CustomHandler struct {
 	inner *slog.JSONHandler
 	attrs []slog.Attr
+}
+
+func TemplateAttr(value any) slog.Attr {
+	return slog.Any(_TEMPLATE, value)
+}
+
+func ErrAttr(err error) slog.Attr {
+	return slog.Any(_ERROR, err)
+}
+
+func ComponentAttr(name string) slog.Attr {
+	return slog.String(_COMPONENT, name)
 }
 
 func newCustomHandler() *_CustomHandler {
@@ -51,62 +65,64 @@ func (h *_CustomHandler) Handle(ctx context.Context, r slog.Record) error {
 	var components []string
 	var attrs []slog.Attr
 	var args []string
-	consumeAttrs(h.attrs, &r, func(a slog.Attr) bool {
-		switch a.Key {
-		case COMPONENT:
-			components = append(components, a.Value.String())
-		case _BAD_KEY:
-			var _args []any
-			if v, ok := a.Value.Any().([]any); ok {
-				_args = v
-			} else {
-				_args = []any{a.Value.Any()}
-			}
 
-			i := 0
-			for arg := fmt.Sprint(_args[i]); i < len(_args) - 1; i++ {
-				args = append(args, arg)
-			}
-
-			last := _args[i]
-			if err, ok := last.(error); ok {
-				attrs = append(attrs, slog.Any("error", err))
-			} else {
-				args = append(args, fmt.Sprint(last))
-			}
-
+	for attr := range h.Attrs(&r) {
+		switch attr.Key {
+		case _COMPONENT:
+			components = append(components, attr.Value.String())
+		case _TEMPLATE:
+			args = append(args, fmt.Sprint(attr.Value.Any()))
+		case _ERROR:
+			attrs = append(attrs, slog.Any("error", attr.Value.Any()))
 		default:
-			attrs = append(attrs, a)
+			attrs = append(attrs, attr)
+		}
+	}
+
+	if len(components) > 0 {
+		component := strings.Join(components, _COMPONENTS_DELIM)
+		attrs = append(attrs, slog.String(_COMPONENT, component))
+	}
+
+	nextArg, _ := iter.Pull(slices.Values(args))
+
+	splits := strings.Split(effectiveRecord.Message, "{}")
+	b := strings.Builder{}
+	b.WriteString(splits[0])
+	for i := 1; i < len(splits); i += 1 {
+		if arg, ok := nextArg(); ok {
+			b.WriteString(arg)
+		} else {
+			b.WriteString("{}")
 		}
 
-		return true
-	})
+		b.WriteString(splits[i])
+	}
+	effectiveRecord.Message = b.String()
 
-	if (len(components) > 0) {
-		component := strings.Join(components, _COMPONENTS_DELIM)
-		effectiveRecord.Add(COMPONENT, component)
+	for arg, ok := nextArg(); ok; arg, ok = nextArg() {
+		attrs = append(attrs, slog.String(_TEMPLATE, arg))
 	}
 
 	effectiveRecord.AddAttrs(attrs...)
-	for _, arg := range args {
-		effectiveRecord.Message = strings.Replace(effectiveRecord.Message, "{}", arg, 1)
-	}
 
 	return h.inner.Handle(ctx, effectiveRecord)
 }
 
-func consumeAttrs(attrs []slog.Attr, r *slog.Record, consumer func(slog.Attr) bool) {
-	for _, attr := range attrs {
-		if (!consumer(attr)) {
-			return
+func (h _CustomHandler) Attrs(r *slog.Record) iter.Seq[slog.Attr] {
+	return func(yield func(slog.Attr) bool) {
+		for _, attr := range h.attrs {
+			if (!yield(attr)) {
+				return
+			}
 		}
-	}
 
-	r.Attrs(consumer)
+		r.Attrs(yield)
+	}
 }
 
 func NewLogger() *slog.Logger {
 	handler := newCustomHandler()
-	logger := slog.New(handler).With(slog.String(COMPONENT, "root"))
+	logger := slog.New(handler).With(slog.String(_COMPONENT, "root"))
 	return logger;
 }

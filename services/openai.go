@@ -1,6 +1,8 @@
-package shared
+package services
 
 import (
+	"d0ctr/bldbr-bot/shared"
+
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 )
@@ -15,7 +17,7 @@ func OpenAi() *openai.Client {
 var openaiClient *openai.Client = nil 
 
 func getOpenaiClient() *openai.Client {
-	token, ok := OPENAI_TOKEN.Get()
+	token, ok := shared.OPENAI_TOKEN.Get()
 	if !ok {
 		return nil
 	}

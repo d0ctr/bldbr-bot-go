@@ -4,6 +4,7 @@ import (
 	"d0ctr/bldbr-bot/llm/htmlizer"
 	"d0ctr/bldbr-bot/llm/openai"
 	"d0ctr/bldbr-bot/llm/types"
+	"d0ctr/bldbr-bot/shared"
 	"log/slog"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ func CreateStream(model types.Model, messages []types.Message) (chan types.Messa
 				case delta := <-stream.Delta:
 					_, err := partialBuilder.WriteString(delta)
 					if err != nil {
-						slog.Error("failed to write partial string", err)
+						slog.Error("failed to write partial string", shared.ErrAttr(err))
 						text = ""
 					} else {
 						text = partialBuilder.String()
@@ -54,14 +55,14 @@ func CreateStream(model types.Model, messages []types.Message) (chan types.Messa
 				if text != "" {
 					text, err := htmlizer.Htmlize(text)
 					if err != nil {
-						slog.Error("failed to sanitize html, attemping to send unsanitized", err)
+						slog.Error("failed to sanitize html, attemping to send unsanitized", shared.ErrAttr(err))
 					}
 
 					msg := types.FromText("", "", types.MESSAGE_ROLE_ASSISTANT, text)
 
 					responses <- msg
 				} else {
-					slog.Debug("empty text, end={}", end)
+					slog.Debug("empty text, end={}", shared.TemplateAttr(end))
 				}
 			}
 		}()

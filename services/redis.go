@@ -1,7 +1,8 @@
-package shared
+package services
 
 import (
 	"context"
+	"d0ctr/bldbr-bot/shared"
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
@@ -14,9 +15,9 @@ func Redis() (*redis.Client, context.Context) {
 }
 
 func init() {
-	var logger = slog.Default().With("component", "redis")
+	var logger = slog.Default().With(shared.ComponentAttr("redis"))
 
-	url, ok := REDIS_URL.Get()
+	url, ok := shared.REDIS_URL.Get()
 	if !ok {
 		logger.Error("redis url is empty")
 		return
@@ -24,7 +25,7 @@ func init() {
 
 	opt, err := redis.ParseURL(url)
 	if err != nil {
-		logger.Error("failed to parse redis url: {}", err)
+		logger.Error("failed to parse redis url: {}", shared.ErrAttr(err))
 	}
 
 	opt.OnConnect = func (context.Context, *redis.Conn) error {

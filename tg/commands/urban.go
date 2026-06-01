@@ -28,7 +28,7 @@ var Urban = CommandDefinition{
 }
 
 func urban(bot *gotgbot.Bot, ctx *ext.Context) error {
-	logger := slog.Default().With("component", "urban")
+	logger := slog.Default().With(shared.ComponentAttr("urban"))
 
 	url, ok := shared.URBAN_API.Get()
 	if !ok {

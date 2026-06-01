@@ -18,6 +18,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 
 	"d0ctr/bldbr-bot/llm/types"
+	"d0ctr/bldbr-bot/shared"
 	tg "d0ctr/bldbr-bot/tg/utils"
 )
 
@@ -36,7 +37,7 @@ func getMessageParams(b *gotgbot.Bot, source *gotgbot.Message) (id string, autho
 }
 
 func fromTgMessage(b *gotgbot.Bot, source *gotgbot.Message) (types.Message, bool) {
-	logger := slog.With("component", "tg-to-llm")
+	logger := slog.With(shared.ComponentAttr("tg-to-llm"))
 	id, author, role := getMessageParams(b, source)
 
 	var content []types.MessageContent
@@ -96,13 +97,13 @@ func fromTgMessage(b *gotgbot.Bot, source *gotgbot.Message) (types.Message, bool
 		})
 
 		if file, err := b.GetFile(image.FileId, nil); err != nil {
-			logger.Error("failed to get file", err)
+			logger.Error("failed to get file", shared.ErrAttr(err))
 		} else if r, err := http.Get(file.URL(b, nil)); err != nil {
-			logger.Error("failed to download the file", err)
+			logger.Error("failed to download the file", shared.ErrAttr(err))
 		} else if r.StatusCode != 200 {
-			logger.Error("failed to download the file with status code [{}]", r.Status)
+			logger.Error("failed to download the file with status code [{}]", shared.TemplateAttr(r.Status))
 		} else if bytes, err := io.ReadAll(r.Body); err != nil {
-			logger.Error("failed to read the file", err)
+			logger.Error("failed to read the file", shared.ErrAttr(err))
 		} else {
 			base64 := base64Enc.StdEncoding.EncodeToString(bytes)
 			mediaType := r.Header.Get("Content-Type")
@@ -350,11 +351,11 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 
 		if err != nil && strings.Contains(err.Error(), "Too Many Requests") {
 			cooldownDuration := time.Duration(parseCooldown(err)) * time.Second
-			slog.Debug("going to fast, cooling down for {}s", cooldownDuration)
+			slog.Debug("going to fast, cooling down for {}s", shared.TemplateAttr(cooldownDuration))
 
 			cooldown.Reset(cooldownDuration * time.Second)
 		} else if err != nil {
-			slog.Warn("failed to send draft", slog.Any("chat", chatId), err)
+			slog.Warn("failed to send draft", slog.Any("chat", chatId), shared.ErrAttr(err))
 		} else if !ok {
 			slog.Warn("draft was not sent", slog.Any("chat", chatId))
 		}
@@ -379,7 +380,7 @@ func parseCooldown(err error) int {
 		timeoutStr := matches[1]
 
 		if v, err := strconv.Atoi(timeoutStr); err != nil {
-			slog.Error("failed to parse cooldown from string {}", text)
+			slog.Error("failed to parse cooldown from string {}", shared.TemplateAttr(text))
 		} else {
 			return v
 		}

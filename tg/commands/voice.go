@@ -2,16 +2,16 @@ package commands
 
 import (
 	"context"
-	"net/http"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/openai/openai-go/v3"
 	"github.com/google/uuid"
+	"github.com/openai/openai-go/v3"
 
-	"d0ctr/bldbr-bot/shared"
+	"d0ctr/bldbr-bot/services"
 )
 
 var Voice = CommandDefinition{
@@ -40,7 +40,7 @@ func voice(bot *gotgbot.Bot, ctx *ext.Context) error {
 			reader = _reader
 		}
 	} else {
-		client := shared.OpenAi()
+		client := services.OpenAi()
 		
 		if client == nil {
 			sendErrorMsg(bot, ctx, "Озвучка отдыхает.")
