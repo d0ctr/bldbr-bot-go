@@ -1,12 +1,8 @@
 package llm
 
 import (
-	"log/slog"
-
-	"d0ctr/bldbr-bot/llm/htmlizer"
 	"d0ctr/bldbr-bot/llm/openai"
 	"d0ctr/bldbr-bot/llm/types"
-	"d0ctr/bldbr-bot/shared"
 )
 
 const prompt = `# DESCRIPTION
@@ -25,11 +21,6 @@ func SendRequest(model types.Model, messages []types.Message) (types.Message, er
 	} else if text, err := openai.FindFirstText(res); err != nil {
 		return types.Message{}, err
 	} else {
-		text, err = htmlizer.Htmlize(text)
-		if err != nil {
-			slog.Error("error sanitizing html", shared.ErrAttr(err))
-		}
-
 		msg := types.FromText("", "", types.MESSAGE_ROLE_ASSISTANT, text)
 		return msg, nil
 	}

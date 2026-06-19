@@ -1,7 +1,6 @@
 package llm
 
 import (
-	"d0ctr/bldbr-bot/llm/htmlizer"
 	"d0ctr/bldbr-bot/llm/openai"
 	"d0ctr/bldbr-bot/llm/types"
 	"d0ctr/bldbr-bot/shared"
@@ -53,11 +52,6 @@ func CreateStream(model types.Model, messages []types.Message) (chan types.Messa
 				}
 
 				if text != "" {
-					text, err := htmlizer.Htmlize(text)
-					if err != nil {
-						slog.Error("failed to sanitize html, attemping to send unsanitized", shared.ErrAttr(err))
-					}
-
 					msg := types.FromText("", "", types.MESSAGE_ROLE_ASSISTANT, text)
 
 					responses <- msg

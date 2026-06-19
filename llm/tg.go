@@ -247,31 +247,27 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	endAction := tg.WithAction(b, ctx, gotgbot.ChatActionTyping)
 	defer endAction()
 
-	var tgMessage *gotgbot.Message
+	var replyMessage *types.Message
 	var err error
 
 	if ctx.EffectiveChat.Type == "private" {
-		tgMessage, err = streamProgress(model, messages, b, ctx)
+		replyMessage, err = streamProgress(model, messages, b, ctx)
 	} else {
-		tgMessage, err = sendOneOff(model, messages, b, ctx)
+		replyMessage, err = sendOneOff(model, messages, b, ctx)
 	}
 
 	if err != nil {
 		return err
 	}
 
-	if message, ok := fromTgMessage(b, tgMessage); ok {
-		prev := node
-		node = NewTreeNode(message)
-		tree.AppendNode(prev, node)
-	} else {
-		return fmt.Errorf("failed to save context node, no tex in the message")
-	}
+	prev := node
+	node = NewTreeNode(*replyMessage)
+	tree.AppendNode(prev, node)
 
 	return nil
 }
 
-func sendOneOff(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *gotgbot.Message, err error) {
+func sendOneOff(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *types.Message, err error) {
 	r, err := SendRequest(model, messages)
 	if err != nil {
 		tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
@@ -284,14 +280,16 @@ func sendOneOff(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx
 		return nil, tg.FmtNoSendError("no text in the response: %v", r)
 	}
 
-	tgMessage, err := ctx.Message.ReplyMessage(b, text, tg.GetDefaultMessageOpts())
+	tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{Markdown: text}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error on send: %w", err)
 	}
-	return tgMessage, nil
+	id, author, role := getMessageParams(b, tgMessage)
+	replyMessage := types.FromText(id, author, role, text)
+	return &replyMessage, nil
 }
 
-func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *gotgbot.Message, err error) {
+func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *types.Message, err error) {
 	chatId := ctx.EffectiveChat.Id
 	draftId := rand.Int64()
 
@@ -313,13 +311,13 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 				tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
 				return nil, tg.FmtNoSendError("request resulted in an error: %w", err)
 			}
-		case msg, open := <- r:
+		case replyMessage, open := <- r:
 			if !open {
 				goto finish
 			}
 
 			var ok bool
-			text, ok = msg.Text()
+			text, ok = replyMessage.Text()
 
 			if !ok {
 				tg.SendErrorMsg(b, ctx, "В ответе не было текста...")
@@ -344,10 +342,7 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 			continue
 		}
 
-		ok, err := b.SendMessageDraft(chatId, draftId, &gotgbot.SendMessageDraftOpts{
-			Text: text,
-			ParseMode: gotgbot.ParseModeHTML,
-		})
+		ok, err := b.SendRichMessageDraft(chatId, draftId, gotgbot.InputRichMessage{ Markdown: text }, nil)
 
 		if err != nil && strings.Contains(err.Error(), "Too Many Requests") {
 			cooldownDuration := time.Duration(parseCooldown(err)) * time.Second
@@ -362,12 +357,13 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 	}
 
 finish:
-	tgMessage, err := ctx.Message.ReplyMessage(b, text, tg.GetDefaultMessageOpts())
-	if err != nil {
+	if tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{ Markdown: text }, nil); err != nil {
 		return nil, fmt.Errorf("error on send: %w", err)
+	} else {
+		id, author, role := getMessageParams(b, tgMessage)
+		replyMessage := types.FromText(id, author, role, text)
+		return &replyMessage, nil
 	}
-
-	return tgMessage, nil
 }
 
 var cooldownRegex = regexp.MustCompile(`retry after (?<time>\d+)$`)
