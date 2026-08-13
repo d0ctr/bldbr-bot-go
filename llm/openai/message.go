@@ -73,10 +73,10 @@ func mapContentList(contents []types.MessageContent, textOnly bool) (content res
 func mapMessages(messages []types.Message) responses.ResponseNewParamsInputUnion {
 	var items []responses.ResponseInputItemUnionParam
 
-	for i, message := range messages {
+	for _, message := range messages {
 		var textOnly bool
 
-		if i == 0 || message.Role() == types.MESSAGE_ROLE_ASSISTANT {
+		if message.Role() == types.MESSAGE_ROLE_ASSISTANT {
 			textOnly = true
 		} else {
 			textOnly = false

@@ -10,7 +10,7 @@ import (
 )
 
 func ReplyToBot() ext.Handler {
-	return handlers.NewMessage(
+	handler := handlers.NewMessage(
 		func(msg *gotgbot.Message) bool {
 			// is a reply
 			return msg.ReplyToMessage != nil &&
@@ -23,4 +23,6 @@ func ReplyToBot() ext.Handler {
 		},
 		llm.ReplyResponse,
 	)
+
+	return handlers.NewNamedhandler("message_llm_reply", handler)
 }

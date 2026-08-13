@@ -73,10 +73,12 @@ func NewTgClient() (*TgClient, error) {
 
 func (tg TgClient) Start(wg *sync.WaitGroup) {
 	tg.dispatcher.AddHandler(handlers.AutoDelete())
-	tg.dispatcher.AddHandler(handlers.ReplyToBot())
+
 	for handler := range handlers.Commands() {
 		tg.dispatcher.AddHandler(handler)
 	}
+
+	tg.dispatcher.AddHandler(handlers.ReplyToBot())
 
 	if err := tg.startWebhook(); err != nil {
 		logger.Error("failed to start webhook", shared.ErrAttr(err))
