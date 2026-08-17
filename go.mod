@@ -3,7 +3,7 @@ module d0ctr/bldbr-bot
 go 1.26.0
 
 require (
-	github.com/PaulSonOfLars/gotgbot/v2 v2.0.0-rc.35
+	github.com/PaulSonOfLars/gotgbot/v2 v2.0.0-rc.36
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/dotenv-org/godotenvvault v0.6.0
 	github.com/gomarkdown/markdown v0.0.0-20260417124207-7d523f7318df

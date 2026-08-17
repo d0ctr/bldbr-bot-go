@@ -328,7 +328,7 @@ func sendOneOff(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx
 		return nil, tg.FmtNoSendError("no text in the response: %v", r)
 	}
 
-	tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{Markdown: text}, nil)
+	tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{ Markdown: text }, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error on send: %w", err)
 	}
