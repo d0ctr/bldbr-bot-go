@@ -2,6 +2,7 @@ package llm
 
 import (
 	base64Enc "encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -87,14 +88,18 @@ func fromTgMessage(b *gotgbot.Bot, source *gotgbot.Message) (types.Message, bool
 		}
 
 		if text != "" {
-			content = append(content, types.NewMessageContentText(source.OriginalMDV2()))
+			content = append(content, types.NewMessageContentText(text))
 		}
+
 	}
 
 	if len(source.Photo) > 0 {
-		image := slices.MinFunc(source.Photo, func(a, b gotgbot.PhotoSize) int {
+		slices.SortFunc(source.Photo, func(a, b gotgbot.PhotoSize) int {
 			return int((a.Height + a.Width) - (b.Height + b.Width))
 		})
+
+		// pick the middle
+		image := source.Photo[len(source.Photo) / 2]
 
 		if file, err := b.GetFile(image.FileId, nil); err != nil {
 			logger.Error("failed to get file", shared.ErrAttr(err))
@@ -118,7 +123,7 @@ func fromTgMessage(b *gotgbot.Bot, source *gotgbot.Message) (types.Message, bool
 
 	}
 
-	return types.NewMessage(id, author, role, content), len(content) > 0
+	return types.NewMessage(id, author, role, content), len(content) > 0 
 }
 
 func getTgTree(chatId int64) *Tree {
@@ -164,6 +169,49 @@ func getOrCreateTgNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNod
 	}
 
 	return tree, node
+}
+
+func StringifyContext(b *gotgbot.Bot, source *gotgbot.Message) string {
+	_, node := getOrCreateTgNode(b, source)
+
+	context := strings.Builder{}
+	for node != nil {
+		content := []any{}
+
+
+		for _, c := range node.message.Content() {
+			c.OfText(func(text string) {
+				content = append(content, map[string]string{
+					"text": text,
+				})
+			})
+
+			c.OfMedia(func(mediaType, base64, fileId string) {
+				content = append(content, map[string]string{
+					"media_type": mediaType,
+					"base64": "...",
+					"file_id": fileId,
+				})
+			})
+		}
+
+		nodeAsMap := map[string]any{
+			"id": node.id(),
+			"message": map[string]any{
+				"id": node.message.Id(),
+				"role": node.message.Role(),
+				"content": content,
+			},
+		}
+
+		b, _ := json.MarshalIndent(nodeAsMap, "", "  ")
+		context.Write(b)
+		context.WriteString("\n")
+
+		node = node.prev
+	}
+
+	return context.String()
 }
 
 func getTgNode(source *gotgbot.Message) (*Tree, *TreeNode) {

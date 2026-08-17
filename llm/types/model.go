@@ -31,9 +31,11 @@ func (m Model) Provider() string {
 var MODEL_GPT_5_4_NANO Model = Model{ "gpt-5.4-nano", MODEL_PROVIDER_OPENAI }
 
 var MODEL_GROK_4_3 Model = Model{ "grok-4.3", MODEL_PROVIDER_XAI }
+var MODEL_GROK_4_6 Model = Model{ "grok-4.6", MODEL_PROVIDER_XAI }
 
 var models = map[string]Model {
 	MODEL_GPT_5_4_NANO.name: MODEL_GPT_5_4_NANO,
+	MODEL_GROK_4_6.name: MODEL_GROK_4_6,
 	MODEL_GROK_4_3.name: MODEL_GROK_4_3,
 }
 
