@@ -57,7 +57,7 @@ func buildStreamGrok(base responses.ResponseNewParams, messages []types.Message)
 }
 
 func BuildStream(model types.Model, prompt string, messages []types.Message, cursor string) responses.ResponseNewParams {
-	params := bareParams(prompt, model)
+	params := bareParams(prompt, model, cursor)
 	switch (model.Provider()) {
 		case types.MODEL_PROVIDER_OPENAI: {
 			params = buildStreamGpt(params, messages)
@@ -66,10 +66,6 @@ func BuildStream(model types.Model, prompt string, messages []types.Message, cur
 			params = buildStreamGrok(params, messages)
 		}
 		default: panic("unreachable")
-	}
-
-	if cursor != "" {
-		params.PreviousResponseID = openai.String(cursor)
 	}
 
 	return params
@@ -118,11 +114,7 @@ func CreateStream(model types.Model, request responses.ResponseNewParams, conver
 			switch cur := oStream.Current().AsAny().(type) {
 				case responses.ResponseTextDeltaEvent: stream.Delta <- cur.Delta
 				case responses.ResponseTextDoneEvent: stream.Final <- cur.Text
-			}
-
-			responseId := oStream.Current().AsResponseCompleted().Response.ID
-			if responseId != "" {
-				stream.ResponseId <- responseId
+				case responses.ResponseCompletedEvent: stream.ResponseId <- cur.Response.ID
 			}
 		}
 

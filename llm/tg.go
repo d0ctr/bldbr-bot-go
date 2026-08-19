@@ -428,7 +428,9 @@ finish:
 	if tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{ Markdown: text }, nil); err != nil {
 		return nil, "", fmt.Errorf("error on send: %w", err)
 	} else {
-		cursor = <- cursorChan
+		slog.Default().Debug("blocking for cursor")
+		cursor = <-cursorChan
+		slog.Default().Debug("unblocking for cursor")
 		id, author, role := getMessageParams(b, tgMessage)
 		replyMessage := types.FromText(id, author, role, text)
 		return &replyMessage, cursor, nil

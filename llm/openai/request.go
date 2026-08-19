@@ -13,9 +13,8 @@ import (
 )
 
 
-func bareParams(prompt string, model types.Model) responses.ResponseNewParams {
-	return responses.ResponseNewParams{
-		Instructions: openai.String(prompt),
+func bareParams(prompt string, model types.Model, cursor string) responses.ResponseNewParams {
+	params := responses.ResponseNewParams{
 		Store: openai.Bool(false),
 		ToolChoice: responses.ResponseNewParamsToolChoiceUnion{
 			OfToolChoiceMode: openai.Opt(responses.ToolChoiceOptionsAuto),
@@ -26,10 +25,18 @@ func bareParams(prompt string, model types.Model) responses.ResponseNewParams {
 		},
 		Model: model.Name(),
 	}
+
+	if cursor != "" {
+		params.PreviousResponseID = openai.String(cursor)
+	} else {
+		params.Instructions = openai.String(prompt)
+	}
+
+	return params
 }
 
 func BuildRequest(model types.Model, prompt string, messages []types.Message, cursor string) responses.ResponseNewParams {
-	params := bareParams(prompt, model)
+	params := bareParams(prompt, model, cursor)
 	
 	switch (model.Provider()) {
 		case types.MODEL_PROVIDER_OPENAI: {
@@ -39,10 +46,6 @@ func BuildRequest(model types.Model, prompt string, messages []types.Message, cu
 			params = buildRequestGrok(params, messages)
 		}
 		default: panic("unreachable")
-	}
-
-	if cursor != "" {
-		params.PreviousResponseID = openai.String(cursor)
 	}
 
 	return params
