@@ -18,7 +18,7 @@ type Error error
 var NoSessionError Error = fmt.Errorf("no session")
 
 func init() {
-	logger = slog.With(shared.ComponentAttr("discord"))
+	logger = shared.WithComponent("discord")
 	var err error
 
 	if token, ok := shared.DISCORD_TOKEN.Get(); !ok {

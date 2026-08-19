@@ -8,6 +8,7 @@ import (
 	"d0ctr/bldbr-bot/services"
 
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 )
 
@@ -27,17 +28,24 @@ func bareParams(prompt string, model types.Model) responses.ResponseNewParams {
 	}
 }
 
-func BuildRequest(model types.Model, prompt string, messages []types.Message) responses.ResponseNewParams {
-	base := bareParams(prompt, model)
+func BuildRequest(model types.Model, prompt string, messages []types.Message, cursor string) responses.ResponseNewParams {
+	params := bareParams(prompt, model)
+	
 	switch (model.Provider()) {
 		case types.MODEL_PROVIDER_OPENAI: {
-			return buildRequestGpt(base, messages)
+			params = buildRequestGpt(params, messages)
 		}
 		case types.MODEL_PROVIDER_XAI: {
-			return buildRequestGrok(base, messages)
+			params = buildRequestGrok(params, messages)
 		}
+		default: panic("unreachable")
 	}
-	panic("unreachable")
+
+	if cursor != "" {
+		params.PreviousResponseID = openai.String(cursor)
+	}
+
+	return params
 }
 
 func buildRequestGpt(base responses.ResponseNewParams, messages []types.Message) responses.ResponseNewParams {
@@ -71,11 +79,17 @@ func buildRequestGrok(base responses.ResponseNewParams, messages []types.Message
 	return base
 }
 
-func SendRequest(model types.Model, request responses.ResponseNewParams) (Response, error) {
+func SendRequest(model types.Model, request responses.ResponseNewParams, conversationId string) (Response, error) {
 	var client *openai.Client
 
+	var options []option.RequestOption
+
 	switch model.Provider() {
-		case types.MODEL_PROVIDER_XAI: client = services.XAi();
+		case types.MODEL_PROVIDER_XAI: {
+			client = services.XAi();
+			options = append(options, option.WithHeader("x-grok-conv-id", conversationId))
+		}
+
 		case types.MODEL_PROVIDER_OPENAI: client = services.OpenAi()
 	}
 
@@ -83,7 +97,7 @@ func SendRequest(model types.Model, request responses.ResponseNewParams) (Respon
 		return Response{}, fmt.Errorf("no client for model [%v]", model.Name())
 	}
 
-	oResponse, err := client.Responses.New(context.Background(), request)
+	oResponse, err := client.Responses.New(context.Background(), request, options...)
 	if err != nil {
 		err = fmt.Errorf("api error: %v", err)
 	}

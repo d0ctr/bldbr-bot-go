@@ -13,16 +13,21 @@ Make your answers brief but explain more if requested by the user.
 Always answer in the same language as the request.
 `
 
-func SendRequest(model types.Model, messages []types.Message) (types.Message, error) {
-	req := openai.BuildRequest(model, prompt, messages)
+func SendRequest(model types.Model, messages []types.Message, conversationId string, cursor string) (types.Message, string, error) {
+	// disable conversation-based routing and take any server
+	if cursor == "" {
+		conversationId = ""
+	}
 
-	if res, err := openai.SendRequest(model, req); err != nil {
-		return types.Message{}, err
-	} else if text, err := openai.FindFirstText(res); err != nil {
-		return types.Message{}, err
+	req := openai.BuildRequest(model, prompt, messages, cursor)
+
+	if res, err := openai.SendRequest(model, req, conversationId); err != nil {
+		return types.Message{}, "", err
+	} else if text, err := res.FindFirstText(); err != nil {
+		return types.Message{}, "", err
 	} else {
 		msg := types.FromText("", "", types.MESSAGE_ROLE_ASSISTANT, text)
-		return msg, nil
+		return msg, cursor, nil
 	}
 }
 

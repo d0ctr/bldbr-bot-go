@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"d0ctr/bldbr-bot/shared"
-	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -15,7 +14,7 @@ func Redis() (*redis.Client, context.Context) {
 }
 
 func init() {
-	var logger = slog.Default().With(shared.ComponentAttr("redis"))
+	var logger = shared.WithComponent("redis")
 
 	url, ok := shared.REDIS_URL.Get()
 	if !ok {

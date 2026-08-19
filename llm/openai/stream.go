@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 )
 
@@ -14,6 +15,7 @@ type Stream struct {
 	Err chan error
 	Delta chan string
 	Final chan string
+	ResponseId chan string
 }
 
 func buildStreamGpt(base responses.ResponseNewParams, messages []types.Message) responses.ResponseNewParams {
@@ -54,34 +56,46 @@ func buildStreamGrok(base responses.ResponseNewParams, messages []types.Message)
 	return base
 }
 
-func BuildStream(model types.Model, prompt string, messages []types.Message) responses.ResponseNewParams {
-	base := bareParams(prompt, model)
+func BuildStream(model types.Model, prompt string, messages []types.Message, cursor string) responses.ResponseNewParams {
+	params := bareParams(prompt, model)
 	switch (model.Provider()) {
 		case types.MODEL_PROVIDER_OPENAI: {
-			return buildStreamGpt(base, messages)
+			params = buildStreamGpt(params, messages)
 		}
 		case types.MODEL_PROVIDER_XAI: {
-			return buildStreamGrok(base, messages)
+			params = buildStreamGrok(params, messages)
 		}
+		default: panic("unreachable")
 	}
-	panic("unreachable")
+
+	if cursor != "" {
+		params.PreviousResponseID = openai.String(cursor)
+	}
+
+	return params
 }
 
 
 
-func CreateStream(model types.Model, request responses.ResponseNewParams) (Stream, error) {
+func CreateStream(model types.Model, request responses.ResponseNewParams, conversationId string) (Stream, error) {
 	var client *openai.Client
+	var options []option.RequestOption
 
 	switch model.Provider() {
-		case types.MODEL_PROVIDER_OPENAI: client = services.OpenAi()
-		case types.MODEL_PROVIDER_XAI: client = services.XAi();
+		case types.MODEL_PROVIDER_OPENAI: {
+			client = services.OpenAi()
+		}
+		case types.MODEL_PROVIDER_XAI: {
+			client = services.XAi();
+			options = append(options, option.WithHeader("x-grok-conv-id", conversationId))
+		}
 	}
 
 	if client == nil {
 		return Stream{}, fmt.Errorf("no client for model [%v]", model.Name())
 	}
 
-	oStream := client.Responses.NewStreaming(context.Background(), request)
+	oStream := client.Responses.NewStreaming(context.Background(), request, options...)
 
 	stream := Stream{
 		Err: make(chan error, 1),
@@ -100,10 +114,11 @@ func CreateStream(model types.Model, request responses.ResponseNewParams) (Strea
 
 		for oStream.Next() {
 			switch cur := oStream.Current().AsAny().(type) {
-			case responses.ResponseTextDeltaEvent:
-				stream.Delta <- cur.Delta
-			case responses.ResponseTextDoneEvent:
-				stream.Final <- cur.Text
+				case responses.ResponseTextDeltaEvent: stream.Delta <- cur.Delta
+				case responses.ResponseTextDoneEvent: {
+					stream.ResponseId <- oStream.Current().Response.ID
+					stream.Final <- cur.Text
+				}
 			}
 		}
 

@@ -9,17 +9,24 @@ import (
 	"time"
 )
 
-func CreateStream(model types.Model, messages []types.Message) (chan types.Message, chan error) {
-	req := openai.BuildStream(model, prompt, messages)
+func CreateStream(model types.Model, messages []types.Message, cursor string, conversationId string) (chan types.Message, chan string, chan error) {
+	// disable conversation-based routing and take any server
+	if cursor == "" {
+		conversationId = ""
+	}
+
+	req := openai.BuildStream(model, prompt, messages, cursor)
 	responses := make(chan types.Message)
 	errs := make(chan error, 1)
+	cursorChan := make(chan string, 1)
 
 	closeAll := func() {
 		close(errs)
 		close(responses)
+		close(cursorChan)
 	}
 
-	if stream, err := openai.CreateStream(model, req); err != nil {
+	if stream, err := openai.CreateStream(model, req, conversationId); err != nil {
 		errs <- err
 		closeAll()
 	} else {
@@ -34,6 +41,7 @@ func CreateStream(model types.Model, messages []types.Message) (chan types.Messa
 				timer := time.NewTimer(10 * time.Second)
 				select {
 				case text = <-stream.Final:
+					cursorChan <- <- stream.ResponseId
 					end = true
 				case err := <- stream.Err:
 					errs <- err
@@ -62,5 +70,5 @@ func CreateStream(model types.Model, messages []types.Message) (chan types.Messa
 		}()
 	}
 
-	return responses, errs
+	return responses, cursorChan, errs
 }

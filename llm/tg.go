@@ -144,11 +144,7 @@ func addTgTree(chatId int64, tree *Tree) {
 func (t *Tree) getTgNode(messageId int64) *TreeNode {
 	nodeId := strconv.FormatInt(messageId, 10)
 
-	if node, ok := t.nodes[nodeId]; ok {
-		return node
-	} else {
-		return nil
-	}
+	return t.GetNode(nodeId)
 }
 
 func getOrCreateTgNode(b *gotgbot.Bot, source *gotgbot.Message) (*Tree, *TreeNode) {
@@ -202,6 +198,7 @@ func StringifyContext(b *gotgbot.Bot, source *gotgbot.Message) string {
 				"role": node.message.Role(),
 				"content": content,
 			},
+			"cursor": node.cursor,
 		}
 
 		b, _ := json.MarshalIndent(nodeAsMap, "", "  ")
@@ -290,18 +287,17 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 		}
 	}
 
-	messages := tree.CollectMessages(node)
-
 	endAction := tg.WithAction(b, ctx, gotgbot.ChatActionTyping)
 	defer endAction()
 
 	var replyMessage *types.Message
 	var err error
+	var cursor string
 
 	if ctx.EffectiveChat.Type == "private" {
-		replyMessage, err = streamProgress(model, messages, b, ctx)
+		replyMessage, cursor, err = streamProgress(model, tree, node, b, ctx)
 	} else {
-		replyMessage, err = sendOneOff(model, messages, b, ctx)
+		replyMessage, cursor, err = sendOneOff(model, tree, node, b, ctx)
 	}
 
 	if err != nil {
@@ -311,37 +307,61 @@ func RespondToTgMessage(command bool, b *gotgbot.Bot, ctx *ext.Context) error{
 	prev := node
 	node = NewTreeNode(*replyMessage)
 	tree.AppendNode(prev, node)
+	tree.UpdateCursor(node, cursor)
 
 	return nil
 }
 
-func sendOneOff(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *types.Message, err error) {
-	r, err := SendRequest(model, messages)
+func sendOneOff(model types.Model, tree *Tree, node *TreeNode, b *gotgbot.Bot, ctx *ext.Context) (message *types.Message, cursor string, err error) {
+	if node.prev != nil {
+		cursor = node.prev.cursor
+	}
+
+	var messages []types.Message
+	if cursor != "" {
+		messages = append(messages, node.message)
+	} else {
+		messages = tree.CollectMessages(node)
+	}
+
+
+	r, cursor, err := SendRequest(model, messages, tree.GetId(), cursor)
 	if err != nil {
 		tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
-		return nil, tg.FmtNoSendError("request resulted in an error: %w", err)
+		return nil, "", tg.FmtNoSendError("request resulted in an error: %w", err)
 	}
 
 	text, ok := r.Text()
 	if !ok {
 		tg.SendErrorMsg(b, ctx, "В ответе не было текста...")
-		return nil, tg.FmtNoSendError("no text in the response: %v", r)
+		return nil, "", tg.FmtNoSendError("no text in the response: %v", r)
 	}
 
 	tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{ Markdown: text }, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error on send: %w", err)
+		return nil, "", fmt.Errorf("error on send: %w", err)
 	}
 	id, author, role := getMessageParams(b, tgMessage)
 	replyMessage := types.FromText(id, author, role, text)
-	return &replyMessage, nil
+	return &replyMessage, cursor, nil
 }
 
-func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot, ctx *ext.Context) (message *types.Message, err error) {
+func streamProgress(model types.Model, tree *Tree, node *TreeNode, b *gotgbot.Bot, ctx *ext.Context) (message *types.Message, cursor string, err error) {
 	chatId := ctx.EffectiveChat.Id
 	draftId := rand.Int64()
 
-	r, e := CreateStream(model, messages)
+	if node.prev != nil {
+		cursor = node.prev.cursor
+	}
+
+	var messages []types.Message
+	if cursor != "" {
+		messages = append(messages, node.message)
+	} else {
+		messages = tree.CollectMessages(node)
+	}
+
+	r, cursorChan, e := CreateStream(model, messages, cursor, tree.GetId())
 	var text string
 
 	cooldown := time.NewTimer(0)
@@ -357,7 +377,7 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 		case err := <- e:
 			if err != nil {
 				tg.SendErrorMsg(b, ctx, "Ошибка при получении ответа", err)
-				return nil, tg.FmtNoSendError("request resulted in an error: %w", err)
+				return nil, "", tg.FmtNoSendError("request resulted in an error: %w", err)
 			}
 		case replyMessage, open := <- r:
 			if !open {
@@ -369,7 +389,7 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 
 			if !ok {
 				tg.SendErrorMsg(b, ctx, "В ответе не было текста...")
-				return nil, tg.FmtNoSendError("no text in the response: %v", r)
+				return nil, "", tg.FmtNoSendError("no text in the response: %v", r)
 			}
 		case <-timer.C:
 			slog.Debug("timed out waiting next message")
@@ -406,11 +426,12 @@ func streamProgress(model types.Model, messages []types.Message, b *gotgbot.Bot,
 
 finish:
 	if tgMessage, err := ctx.Message.ReplyRichMessage(b, gotgbot.InputRichMessage{ Markdown: text }, nil); err != nil {
-		return nil, fmt.Errorf("error on send: %w", err)
+		return nil, "", fmt.Errorf("error on send: %w", err)
 	} else {
+		cursor = <- cursorChan
 		id, author, role := getMessageParams(b, tgMessage)
 		replyMessage := types.FromText(id, author, role, text)
-		return &replyMessage, nil
+		return &replyMessage, cursor, nil
 	}
 }
 

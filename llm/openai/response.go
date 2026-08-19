@@ -10,7 +10,7 @@ type Response struct {
 	oResponse *responses.Response
 }
 
-func FindFirstText(res Response) (string, error) {
+func (res Response) FindFirstText() (string, error) {
 	if len(res.oResponse.Output) == 0 {
 		return "", fmt.Errorf("received an error: %v", res.oResponse.Error)
 	}
@@ -26,4 +26,8 @@ func FindFirstText(res Response) (string, error) {
 	}
 
 	return "", fmt.Errorf("no valid response: %v", res.oResponse.Output)
+}
+
+func (res Response) GetId() (string) {
+	return res.oResponse.ID
 }

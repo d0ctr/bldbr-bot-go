@@ -126,3 +126,7 @@ func NewLogger() *slog.Logger {
 	logger := slog.New(handler).With(slog.String(_COMPONENT, "root"))
 	return logger;
 }
+
+func WithComponent(component string) *slog.Logger {
+	return NewLogger().With(ComponentAttr(component))
+}

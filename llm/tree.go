@@ -4,14 +4,18 @@ import (
 	"slices"
 
 	"d0ctr/bldbr-bot/llm/types"
+
+	"github.com/google/uuid"
 )
 
 type Tree struct {
 	nodes map[string]*TreeNode
+	id string
 }
 
 func NewTree(root *TreeNode) *Tree {
-	return &Tree{ map[string]*TreeNode{root.id(): root} }
+	id := uuid.New().String()
+	return &Tree{ map[string]*TreeNode{root.id(): root}, id }
 }
 
 func (t *Tree) AddNode(node *TreeNode) {
@@ -58,15 +62,27 @@ func (t *Tree) CollectMessages(node *TreeNode) []types.Message {
 	return messages
 }
 
+func (t *Tree) UpdateCursor(node *TreeNode, cursor string) {
+	node.cursor = cursor
+	node = node.prev
+	for node != nil {
+		node.cursor = ""
+	}
+}
+
+func (t *Tree) GetId() string {
+	return t.id
+}
 
 type TreeNode struct {
 	message types.Message
 	prev *TreeNode
 	// next []*TreeNode
+	cursor string // this is effectively the response id that got us this node, if there is none, then the full context should be sent
 }
 
 func NewTreeNode(message types.Message) *TreeNode {
-	return &TreeNode{ message, nil }
+	return &TreeNode{ message, nil, "" }
 }
 
 func (n TreeNode) id() string {
@@ -76,4 +92,3 @@ func (n TreeNode) id() string {
 func (n *TreeNode) append(next *TreeNode) {
 	next.prev = n
 }
-
