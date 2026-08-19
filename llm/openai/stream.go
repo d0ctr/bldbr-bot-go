@@ -101,6 +101,7 @@ func CreateStream(model types.Model, request responses.ResponseNewParams, conver
 		Err: make(chan error, 1),
 		Delta: make(chan string),
 		Final: make(chan string),
+		ResponseId: make(chan string, 1),
 	}
 
 	go func() {

@@ -42,7 +42,7 @@ func CreateStream(model types.Model, messages []types.Message, cursor string, co
 				select {
 				case text = <-stream.Final:
 					end += 1
-				case err := <- stream.Err:
+				case err := <-stream.Err:
 					errs <- err
 					return
 				case delta := <-stream.Delta:
@@ -53,7 +53,7 @@ func CreateStream(model types.Model, messages []types.Message, cursor string, co
 					} else {
 						text = partialBuilder.String()
 					}
-				case cursor = <- stream.ResponseId:
+				case cursor = <-stream.ResponseId:
 					cursorChan <- cursor
 					end += 1
 				case <- timer.C:
