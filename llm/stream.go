@@ -41,7 +41,6 @@ func CreateStream(model types.Model, messages []types.Message, cursor string, co
 				timer := time.NewTimer(10 * time.Second)
 				select {
 				case text = <-stream.Final:
-					cursorChan <- <- stream.ResponseId
 					end += 1
 				case err := <- stream.Err:
 					errs <- err
