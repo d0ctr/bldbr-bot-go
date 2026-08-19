@@ -34,15 +34,15 @@ func CreateStream(model types.Model, messages []types.Message, cursor string, co
 			defer closeAll()
 			partialBuilder := strings.Builder{}
 
-			end := false
-			for !end {
+			end := 0
+			for end < 2 {
 				var text string
 
 				timer := time.NewTimer(10 * time.Second)
 				select {
 				case text = <-stream.Final:
 					cursorChan <- <- stream.ResponseId
-					end = true
+					end += 1
 				case err := <- stream.Err:
 					errs <- err
 					return
@@ -54,6 +54,9 @@ func CreateStream(model types.Model, messages []types.Message, cursor string, co
 					} else {
 						text = partialBuilder.String()
 					}
+				case cursor = <- stream.ResponseId:
+					cursorChan <- cursor
+					end += 1
 				case <- timer.C:
 					slog.Debug("timeout waiting for response in llm/stream.go")
 					continue

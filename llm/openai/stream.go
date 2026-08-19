@@ -110,15 +110,18 @@ func CreateStream(model types.Model, request responses.ResponseNewParams, conver
 			close(stream.Delta)
 			close(stream.Err)
 			close(stream.Final)
+			close(stream.ResponseId)
 		}()
 
 		for oStream.Next() {
 			switch cur := oStream.Current().AsAny().(type) {
 				case responses.ResponseTextDeltaEvent: stream.Delta <- cur.Delta
-				case responses.ResponseTextDoneEvent: {
-					stream.ResponseId <- oStream.Current().Response.ID
-					stream.Final <- cur.Text
-				}
+				case responses.ResponseTextDoneEvent: stream.Final <- cur.Text
+			}
+
+			responseId := oStream.Current().AsResponseCompleted().Response.ID
+			if responseId != "" {
+				stream.ResponseId <- responseId
 			}
 		}
 
