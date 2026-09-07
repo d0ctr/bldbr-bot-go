@@ -23,7 +23,7 @@ var Voice = CommandDefinition{
 func voice(bot *gotgbot.Bot, ctx *ext.Context) error {
 	msg := ctx.Message.ReplyToMessage
 
-	if msg == nil || (msg.Audio == nil && msg.Text == "")  {
+	if msg == nil || (msg.Audio == nil && msg.GetRawText() == "")  {
 		sendErrorMsg(bot, ctx, "Команду нужено отправит в ответ на текстовое или аудио сообщение.")
 		return fmt.Errorf("command must be sent as a reply")
 	}
@@ -45,7 +45,7 @@ func voice(bot *gotgbot.Bot, ctx *ext.Context) error {
 		if client == nil {
 			sendErrorMsg(bot, ctx, "Озвучка отдыхает.")
 			return fmt.Errorf("openai is not available")
-		} else if _reader, err := toSpeech(client, msg.Text); err != nil {
+		} else if _reader, err := toSpeech(client, msg.GetRawText()); err != nil {
 			sendErrorMsg(bot, ctx, "Не удалось сгенерировать аудио", err)
 			return fmt.Errorf("error generating audio: %w", err)
 		} else {
