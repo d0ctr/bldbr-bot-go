@@ -13,4 +13,4 @@ RUN go build -o bot
 ARG PORT=8080
 EXPOSE $PORT
 
-CMD ["dotenvx", "run", "--", "bot"]
+CMD ["dotenvx", "run", "--", "./bot"]
